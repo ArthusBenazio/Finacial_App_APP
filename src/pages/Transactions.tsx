@@ -39,6 +39,7 @@ export default function Transactions() {
 
   const filteredTransactions = transactions?.filter(t => 
     t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (t.categoryRel && t.categoryRel.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
@@ -154,9 +155,15 @@ export default function Transactions() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <Badge variant="outline" className="font-normal text-[11px] bg-background">
-                        {t.category || 'Sem categoria'}
-                      </Badge>
+                      {t.categoryRel ? (
+                        <Badge variant="outline" className="font-normal text-[11px] border-transparent" style={{ backgroundColor: `${t.categoryRel.color}15`, color: t.categoryRel.color }}>
+                          {t.categoryRel.name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="font-normal text-[11px] bg-background">
+                          {t.category || 'Sem categoria'}
+                        </Badge>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground">
                       {getAccountName(t.accountId)}

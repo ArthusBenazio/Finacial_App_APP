@@ -58,8 +58,11 @@ export default function Budgets() {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="font-bold text-sm">{budget.category}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: budget.categoryRel?.color || budget.color }} />
+                        <p className="font-bold text-sm">{budget.categoryRel?.name ?? budget.category ?? 'Sem Categoria'}</p>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
                         Restam <PrivateValue value={Math.max(0, budget.limit - budget.spent).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
                       </p>
                     </div>
@@ -72,8 +75,11 @@ export default function Budgets() {
                   </div>
                   <div className="relative h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div 
-                      className={cn("absolute top-0 left-0 h-full transition-all duration-500", budget.color || "bg-primary")} 
-                      style={{ width: `${percentage}%` }}
+                      className="absolute top-0 left-0 h-full transition-all duration-500" 
+                      style={{ 
+                        width: `${percentage}%`,
+                        backgroundColor: budget.categoryRel?.color || '#0b6e6f'
+                      }}
                     />
                   </div>
                   {warning && (

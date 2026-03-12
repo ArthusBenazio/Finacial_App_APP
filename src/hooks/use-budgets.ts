@@ -3,7 +3,14 @@ import { http } from '../lib/http'
 
 export interface Budget {
   id: string
-  category: string
+  category: string | null
+  categoryId: string | null
+  categoryRel: {
+    id: string
+    name: string
+    icon: string
+    color: string
+  } | null
   limit: number
   spent: number
   color: string

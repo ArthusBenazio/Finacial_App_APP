@@ -30,6 +30,8 @@ import { Button } from "@/components/ui/button"
 import { Plus, Wallet, Tag, Calendar as CalendarIcon, Loader2 } from "lucide-react"
 import { useCreateTransaction } from "@/hooks/use-transactions"
 import { useAccountsBalance } from "@/hooks/use-accounts"
+import { useCategories } from "@/hooks/use-categories"
+import { NewCategoryModal } from "./NewCategoryModal"
 
 const formSchema = z.object({
   title: z.string().min(2, "Título é obrigatório"),
@@ -42,8 +44,10 @@ const formSchema = z.object({
 
 export function NewTransactionModal({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
+  const [newCatOpen, setNewCatOpen] = React.useState(false) // State to control NewCategoryModal independently
   const { mutateAsync: createTransaction, isPending } = useCreateTransaction()
   const { data: accountsBalance } = useAccountsBalance()
+  const { data: categories } = useCategories()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,7 +67,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
         description: values.title,
         amount: Number(values.amount.replace(',', '.')),
         type: values.type,
-        category: values.category,
+        categoryId: values.category,
         accountId: values.account,
         occurredAt: new Date(values.date).toISOString()
       })
@@ -183,12 +187,34 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                           </div>
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="food">Alimentação</SelectItem>
-                        <SelectItem value="home">Moradia</SelectItem>
-                        <SelectItem value="leisure">Lazer</SelectItem>
-                        <SelectItem value="health">Saúde</SelectItem>
-                      </SelectContent>
+                    <SelectContent>
+                      {!categories?.length && (
+                        <div className="text-xs text-muted-foreground p-2 text-center">Nenhuma categoria</div>
+                      )}
+                      {categories?.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <div className="p-1 mt-1 border-t border-border/50">
+                        <NewCategoryModal open={newCatOpen} onOpenChange={setNewCatOpen}>
+                          <Button 
+                            variant="ghost" 
+                            className="w-full justify-start text-xs h-8 gap-2 bg-primary/5 text-primary hover:bg-primary/10"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setNewCatOpen(true);
+                            }}
+                          >
+                            <Plus className="w-3 h-3" /> Criar Categoria
+                          </Button>
+                        </NewCategoryModal>
+                      </div>
+                    </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>

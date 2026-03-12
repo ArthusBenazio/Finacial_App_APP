@@ -7,6 +7,13 @@ export interface Transaction {
   amount: number
   type: 'INCOME' | 'EXPENSE'
   category: string | null
+  categoryId: string | null
+  categoryRel: {
+    id: string
+    name: string
+    icon: string
+    color: string
+  } | null
   occurredAt: string
   accountId: string
   userId: string
@@ -29,7 +36,7 @@ interface CreateTransactionData {
   description: string
   amount: number
   type: 'INCOME' | 'EXPENSE'
-  category: string
+  categoryId: string
   accountId: string
   occurredAt: string
 }

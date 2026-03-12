@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +13,18 @@ import {
   CreditCard, 
   Globe,
   ChevronRight,
-  LogOut
+  LogOut,
+  Tag,
+  Trash2,
+  Plus
 } from "lucide-react";
+import { useCategories, useDeleteCategory } from "@/hooks/use-categories";
+import { NewCategoryModal } from "@/components/modals/NewCategoryModal";
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState<"profile" | "categories">("profile");
+  const { data: categories } = useCategories();
+  const { mutate: deleteCategory } = useDeleteCategory();
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -26,8 +35,19 @@ export default function Settings() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Menu Lateral de Configurações */}
         <aside className="lg:col-span-1 space-y-2">
-          <Button variant="secondary" className="w-full justify-start gap-3 h-11 bg-primary/10 text-primary hover:bg-primary/20">
+          <Button 
+            variant={activeTab === "profile" ? "secondary" : "ghost"} 
+            className={`w-full justify-start gap-3 h-11 ${activeTab === "profile" ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}`}
+            onClick={() => setActiveTab("profile")}
+          >
             <User className="w-4 h-4" /> Perfil
+          </Button>
+          <Button 
+            variant={activeTab === "categories" ? "secondary" : "ghost"} 
+            className={`w-full justify-start gap-3 h-11 ${activeTab === "categories" ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}`}
+            onClick={() => setActiveTab("categories")}
+          >
+            <Tag className="w-4 h-4" /> Categorias
           </Button>
           <Button variant="ghost" className="w-full justify-start gap-3 h-11">
             <Bell className="w-4 h-4" /> Notificações
@@ -45,7 +65,9 @@ export default function Settings() {
 
         {/* Conteúdo da Configuração */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-border/50 shadow-sm">
+          {activeTab === "profile" && (
+            <>
+              <Card className="border-border/50 shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Informações Pessoais</CardTitle>
               <CardDescription>Atualize seus dados de perfil e como os outros te veem.</CardDescription>
@@ -113,6 +135,54 @@ export default function Settings() {
             </div>
             <Button variant="outline" size="sm" className="rounded-full text-[11px] font-bold">Baixar Agora</Button>
           </div>
+            </>
+          )}
+
+          {activeTab === "categories" && (
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="flex flex-row flex-wrap gap-4 items-center justify-between pb-4">
+                <div>
+                  <CardTitle className="text-lg">Categorias</CardTitle>
+                  <CardDescription>Gerencie as tags das suas despesas e orçamentos.</CardDescription>
+                </div>
+                <NewCategoryModal />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {!categories?.length ? (
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      Você ainda não possui categorias cadastradas.
+                    </div>
+                  ) : (
+                    categories.map(cat => (
+                      <div key={cat.id} className="flex items-center justify-between p-3 border border-border/50 rounded-xl hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
+                            <Tag className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-semibold">{cat.name}</span>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja excluir a categoria ${cat.name}?`)) {
+                              deleteCategory(cat.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

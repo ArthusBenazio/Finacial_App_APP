@@ -12,10 +12,18 @@ import {
   PlusCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAccountsBalance } from "@/hooks/use-accounts";
+import { useAccountsBalance, useDeleteAccount } from "@/hooks/use-accounts";
+import { NewAccountModal } from "@/components/modals/NewAccountModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Wallets() {
   const { data: accountsBalance } = useAccountsBalance();
+  const { mutate: deleteAccount } = useDeleteAccount();
   const accounts = accountsBalance?.accounts || [];
 
   return (
@@ -25,9 +33,11 @@ export default function Wallets() {
           <h1 className="text-2xl font-bold tracking-tight">Carteiras & Contas</h1>
           <p className="text-muted-foreground text-sm">Organize seu dinheiro em diferentes bancos e categorias.</p>
         </div>
-        <Button className="rounded-full gap-2">
-          <PlusCircle className="w-4 h-4" /> Adicionar Conta
-        </Button>
+        <NewAccountModal>
+          <Button className="rounded-full gap-2">
+            <PlusCircle className="w-4 h-4" /> Adicionar Conta
+          </Button>
+        </NewAccountModal>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -43,9 +53,23 @@ export default function Wallets() {
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm bg-primary">
                   <Banknote className="w-5 h-5" />
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm("Deseja realmente excluir esta conta e suas transações associadas?")) {
+                        deleteAccount(account.id);
+                      }
+                    }}>
+                      Excluir Conta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="mt-4">
                 <CardTitle className="text-base font-semibold">{account.name}</CardTitle>
@@ -68,12 +92,14 @@ export default function Wallets() {
           </Card>
         ))}
 
-        <button className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary min-h-[180px]">
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10">
-            <Plus className="w-6 h-6" />
-          </div>
-          <span className="font-semibold text-sm text-center">Configurar nova<br/>conta ou carteira</span>
-        </button>
+        <NewAccountModal>
+          <button className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary min-h-[180px] w-full">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10">
+              <Plus className="w-6 h-6" />
+            </div>
+            <span className="font-semibold text-sm text-center">Configurar nova<br/>conta ou carteira</span>
+          </button>
+        </NewAccountModal>
       </div>
 
 
