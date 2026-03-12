@@ -16,18 +16,22 @@ import {
   Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const allTransactions = [
-  { id: 1, title: "Aluguel", category: "Moradia", amount: -2200.00, date: "01 Mar, 2024", account: "Conta Itaú", type: "expense", tags: ["#fixo"] },
-  { id: 2, title: "Freelance Projeto X", category: "Renda", amount: 4500.00, date: "28 Fev, 2024", account: "Conta PJ", type: "income", tags: ["#extra"] },
-  { id: 3, title: "Supermercado", category: "Alimentação", amount: -540.20, date: "27 Fev, 2024", account: "Nubank", type: "expense", tags: ["#essencial"] },
-  { id: 4, title: "Academia", category: "Saúde", amount: -150.00, date: "25 Fev, 2024", account: "Nubank", type: "expense", tags: ["#recorrente"] },
-  { id: 5, title: "Transferência para Investimento", category: "Transferência", amount: 1000.00, date: "24 Fev, 2024", account: "Caixinha", type: "transfer", tags: ["#metas"] },
-  { id: 6, title: "Restaurante", category: "Lazer", amount: -120.00, date: "24 Fev, 2024", account: "XP Vis", type: "expense", tags: ["#fds"] },
-];
+import { useTransactions } from "@/hooks/use-transactions";
+import { useAccountsBalance } from "@/hooks/use-accounts";
 
 export default function Transactions() {
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: transactions } = useTransactions();
+  const { data: accountsBalance } = useAccountsBalance();
+
+  const getAccountName = (id: string) => {
+    return accountsBalance?.accounts.find(a => a.id === id)?.name || 'Conta';
+  }
+
+  const filteredTransactions = transactions?.filter(t => 
+    t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  ) || [];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -85,49 +89,50 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {allTransactions.map((t) => (
+                {!filteredTransactions.length ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                      Nenhuma transação encontrada.
+                    </td>
+                  </tr>
+                ) : filteredTransactions.map((t) => (
                   <tr key={t.id} className="hover:bg-muted/30 transition-colors group cursor-pointer">
                     <td className="py-4 px-4">
                       <div className={cn(
                         "w-8 h-8 rounded-full mx-auto flex items-center justify-center",
-                        t.type === 'income' ? "bg-emerald-50 text-emerald-600" :
-                        t.type === 'expense' ? "bg-rose-50 text-rose-600" :
+                        t.type === 'INCOME' ? "bg-emerald-50 text-emerald-600" :
+                        t.type === 'EXPENSE' ? "bg-rose-50 text-rose-600" :
                         "bg-blue-50 text-blue-600"
                       )}>
-                        {t.type === 'income' ? <ArrowUpRight className="w-3.5 h-3.5" /> :
-                         t.type === 'expense' ? <ArrowDownRight className="w-3.5 h-3.5" /> :
+                        {t.type === 'INCOME' ? <ArrowUpRight className="w-3.5 h-3.5" /> :
+                         t.type === 'EXPENSE' ? <ArrowDownRight className="w-3.5 h-3.5" /> :
                          <ArrowLeftRight className="w-3.5 h-3.5" />}
                       </div>
                     </td>
                     <td className="py-4 px-4 font-medium">
                       <div className="flex flex-col">
-                        <span className="text-foreground">{t.title}</span>
-                        <div className="flex gap-1 mt-1">
-                          {t.tags.map(tag => (
-                            <span key={tag} className="text-[10px] text-primary/70 font-medium">{tag}</span>
-                          ))}
-                        </div>
+                        <span className="text-foreground">{t.description}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       <Badge variant="outline" className="font-normal text-[11px] bg-background">
-                        {t.category}
+                        {t.category || 'Sem categoria'}
                       </Badge>
                     </td>
                     <td className="py-4 px-4 text-muted-foreground">
-                      {t.account}
+                      {getAccountName(t.accountId)}
                     </td>
-                    <td className="py-4 px-4 text-muted-foreground">
-                      {t.date}
+                    <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(t.occurredAt))}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className={cn(
                         "font-semibold",
-                        t.type === 'income' ? "text-emerald-600" :
-                        t.type === 'expense' ? "text-foreground" : "text-blue-600"
+                        t.type === 'INCOME' ? "text-emerald-600" :
+                        t.type === 'EXPENSE' ? "text-foreground" : "text-blue-600"
                       )}>
                         <PrivateValue value={
-                          (t.type === 'expense' ? "-" : t.type === 'income' ? "+" : "") + 
+                          (t.type === 'EXPENSE' ? "-" : t.type === 'INCOME' ? "+" : "") + 
                           Math.abs(t.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         } />
                       </span>

@@ -1,0 +1,38 @@
+ M package-lock.json
+ M package.json
+ M src/App.tsx
+ M src/context/auth-context.tsx
+ M src/main.tsx
+ M src/pages/account-transactions-page.tsx
+ M src/pages/dashboard-page.tsx
+ M src/pages/invite-page.tsx
+ M src/pages/invites-page.tsx
+ M src/pages/login-page.tsx
+ M src/pages/not-found-page.tsx
+ M src/pages/register-page.tsx
+ M src/styles/global.css
+ M tsconfig.json
+ M vite.config.ts
+?? components.json
+?? git-status.txt
+?? postcss.config.cjs
+?? src/components/PrivateValue.tsx
+?? src/components/layout/
+?? src/components/login-form.tsx
+?? src/components/modals/
+?? src/components/ui/
+?? src/hooks/
+?? src/lib/queryClient.ts
+?? src/lib/utils.ts
+?? src/pages/Budgets.tsx
+?? src/pages/Dashboard.tsx
+?? src/pages/Groups.tsx
+?? src/pages/Settings.tsx
+?? src/pages/Transactions.tsx
+?? src/pages/Wallets.tsx
+?? src/pages/auth-callback-page.tsx
+?? src/pages/not-found.tsx
+?? tailwind.config.cjs
+?? tsc-error-new.txt
+?? tsc-error.log
+?? tsc-error.txt

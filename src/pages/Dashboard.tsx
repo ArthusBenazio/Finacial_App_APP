@@ -19,15 +19,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-
-const recentTransactions = [
-  { id: 1, title: "Mercado do Bairro", category: "Alimentação", subcategory: "Hortifruti", amount: -245.50, date: "Hoje, 10:30", tags: ["#urgente"], account: "Cartão Nubank", type: "expense" },
-  { id: 2, title: "Salário Mensal", category: "Renda", subcategory: "Fixo", amount: 8500.00, date: "Ontem, 09:00", tags: [], account: "Conta Itaú", type: "income" },
-  { id: 3, title: "Aluguel da Praia", category: "Viagem", subcategory: "Hospedagem", amount: -800.00, date: "24 Fev, 14:20", tags: ["#viagem"], account: "Cartão XP", type: "expense", shared: true, owes: 400 },
-  { id: 4, title: "Reserva de Emergência", category: "Transferência", subcategory: "Investimento", amount: 500.00, date: "22 Fev, 18:45", tags: [], account: "Caixinha", type: "transfer" },
-];
+import { useAccountsBalance } from "@/hooks/use-accounts";
+import { useTransactions } from "@/hooks/use-transactions";
+import { useBudgets } from "@/hooks/use-budgets";
+import { useGroups } from "@/hooks/use-groups";
 
 export default function Dashboard() {
+  const { data: accountsBalance } = useAccountsBalance();
+  const { data: transactions } = useTransactions();
+  const { data: budgets } = useBudgets();
+  const { data: groups } = useGroups();
+
+  const recentTransactions = transactions?.slice(0, 5) || [];
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const currentMonthTransactions = transactions?.filter(t => {
+    const date = new Date(t.occurredAt);
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  }) || [];
+
+  const receitas = currentMonthTransactions
+    .filter(t => t.type === 'INCOME')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const despesas = currentMonthTransactions
+    .filter(t => t.type === 'EXPENSE')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const getAccountName = (id: string) => {
+    return accountsBalance?.accounts.find(a => a.id === id)?.name || 'Conta';
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Resumo Financeiro */}
@@ -41,12 +65,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-bold tracking-tight">
-              <PrivateValue value="R$ 12.450,00" />
+              <PrivateValue value={(accountsBalance?.totalBalance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
             </div>
-            <p className="text-sm text-primary-foreground/80 mt-2 flex justify-between items-center">
-              <span>Previsto no mês:</span>
-              <span className="font-medium"><PrivateValue value="R$ 14.100,00" /></span>
-            </p>
           </CardContent>
         </Card>
 
@@ -59,7 +79,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              <PrivateValue value="R$ 8.500,00" />
+              <PrivateValue value={receitas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
             </div>
           </CardContent>
         </Card>
@@ -73,7 +93,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              <PrivateValue value="R$ 3.120,50" />
+              <PrivateValue value={despesas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
             </div>
           </CardContent>
         </Card>
@@ -96,28 +116,25 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-background",
-                      t.type === 'income' ? "bg-emerald-50 text-emerald-600" :
-                      t.type === 'expense' ? "bg-rose-50 text-rose-600" :
+                      t.type === 'INCOME' ? "bg-emerald-50 text-emerald-600" :
+                      t.type === 'EXPENSE' ? "bg-rose-50 text-rose-600" :
                       "bg-blue-50 text-blue-600"
                     )}>
-                      {t.type === 'income' ? <ArrowUpRight className="w-4 h-4" /> :
-                       t.type === 'expense' ? <ArrowDownRight className="w-4 h-4" /> :
+                      {t.type === 'INCOME' ? <ArrowUpRight className="w-4 h-4" /> :
+                       t.type === 'EXPENSE' ? <ArrowDownRight className="w-4 h-4" /> :
                        <ArrowLeftRight className="w-4 h-4" />}
                     </div>
                     <div>
                       <div className="font-semibold text-sm text-foreground flex items-center gap-2">
-                        {t.title}
-                        {t.shared && (
+                        {t.description}
+                        {t.isShared && (
                           <Badge variant="secondary" className="text-[9px] font-medium h-4 px-1.5 gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-indigo-100">
                             <Users className="w-2.5 h-2.5" /> Divisão
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] text-muted-foreground font-medium">{t.category} &bull; {t.subcategory}</span>
-                        {t.tags.map(tag => (
-                          <span key={tag} className="text-[9px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">{tag}</span>
-                        ))}
+                        <span className="text-[11px] text-muted-foreground font-medium">{t.category || 'Sem categoria'}</span>
                       </div>
                     </div>
                   </div>
@@ -125,15 +142,15 @@ export default function Dashboard() {
                     <div className="text-right">
                       <div className={cn(
                         "font-semibold text-sm",
-                        t.type === 'income' ? "text-emerald-600" :
-                        t.type === 'expense' ? "text-foreground" : "text-blue-600"
+                        t.type === 'INCOME' ? "text-emerald-600" :
+                        t.type === 'EXPENSE' ? "text-foreground" : "text-blue-600"
                       )}>
                         <PrivateValue value={
-                          (t.type === 'expense' ? "" : "+") + 
+                          (t.type === 'EXPENSE' ? "" : "+") + 
                           t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         } />
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{t.account} &bull; {t.date.split(',')[0]}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{getAccountName(t.accountId)} &bull; {new Intl.DateTimeFormat('pt-BR').format(new Date(t.occurredAt))}</p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -144,7 +161,7 @@ export default function Dashboard() {
                       <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem>Editar Lançamento</DropdownMenuItem>
                         <DropdownMenuItem>Anexar Comprovante</DropdownMenuItem>
-                        {t.shared && <DropdownMenuItem>Detalhes da Divisão</DropdownMenuItem>}
+                        {t.isShared && <DropdownMenuItem>Detalhes da Divisão</DropdownMenuItem>}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -165,22 +182,30 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between bg-white dark:bg-card p-3 rounded-lg shadow-sm border border-orange-100 dark:border-orange-900/30">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src="https://i.pravatar.cc/150?u=b" />
-                    <AvatarFallback>MA</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-sm font-semibold">Marcos</div>
-                    <div className="text-[11px] text-muted-foreground">Aluguel da Praia</div>
-                  </div>
+              {!groups?.length ? (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  Nenhuma pendência recente.
                 </div>
-                <div className="text-right flex flex-col items-end">
-                  <div className="text-sm font-bold text-emerald-600"><PrivateValue value="R$ 400,00" /></div>
-                  <Button variant="link" className="text-[11px] h-auto p-0 font-medium text-orange-600">Liquidar</Button>
+              ) : (
+                <div className="space-y-3">
+                  {groups.slice(0, 2).map((group, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-white dark:bg-card p-3 rounded-lg shadow-sm border border-orange-100 dark:border-orange-900/30">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-8 h-8 flex items-center justify-center bg-muted">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                        </Avatar>
+                        <div>
+                          <div className="text-sm font-semibold">{group.name}</div>
+                          <div className="text-[11px] text-muted-foreground">Divisão de grupo</div>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <Button variant="outline" size="sm" className="h-7 text-[11px]">Ver Grupo</Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -191,23 +216,27 @@ export default function Dashboard() {
               <span className="text-xs text-muted-foreground">Fev 2024</span>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-foreground">Mercado</span>
-                  <span className="text-muted-foreground text-xs"><PrivateValue value="R$ 800 / 1.200" /></span>
+              {!budgets?.length && (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  Nenhum orçamento definido.
                 </div>
-                <Progress value={66} className="h-2 bg-muted" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-foreground">Lazer & Saídas</span>
-                  <span className="text-rose-500 font-semibold text-xs"><PrivateValue value="R$ 550 / 500" /></span>
+              )}
+              {budgets?.map((budget) => (
+                <div key={budget.id} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-foreground">{budget.category}</span>
+                    <span className={cn("text-xs font-semibold", budget.spent > budget.limit ? "text-rose-500" : "text-muted-foreground")}>
+                      <PrivateValue value={`${budget.spent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} / ${budget.limit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`} />
+                    </span>
+                  </div>
+                  <Progress value={Math.min((budget.spent / budget.limit) * 100, 100)} className={cn("h-2", budget.spent > budget.limit ? "bg-rose-100 [&>div]:bg-rose-500" : `bg-muted [&>div]:${budget.color}`)} />
+                  {budget.spent > budget.limit && (
+                    <p className="text-[11px] font-medium text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Limite excedido
+                    </p>
+                  )}
                 </div>
-                <Progress value={100} className="h-2 bg-rose-100 [&>div]:bg-rose-500" />
-                <p className="text-[11px] font-medium text-rose-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Limite excedido
-                </p>
-              </div>
+              ))}
             </CardContent>
           </Card>
         </div>
