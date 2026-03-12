@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useForm, useFormContext } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import {
@@ -27,12 +27,14 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Wallet, Tag, Calendar as CalendarIcon } from "lucide-react"
+import { Plus, Wallet, Tag, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { useCreateTransaction } from "@/hooks/use-transactions"
+import { useAccountsBalance } from "@/hooks/use-accounts"
 
 const formSchema = z.object({
   title: z.string().min(2, "Título é obrigatório"),
   amount: z.string().min(1, "Valor é obrigatório"),
-  type: z.enum(["income", "expense", "transfer"]),
+  type: z.enum(["INCOME", "EXPENSE"]),
   category: z.string().min(1, "Categoria é obrigatória"),
   account: z.string().min(1, "Conta é obrigatória"),
   date: z.string().min(1, "Data é obrigatória"),
@@ -40,23 +42,36 @@ const formSchema = z.object({
 
 export function NewTransactionModal({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
+  const { mutateAsync: createTransaction, isPending } = useCreateTransaction()
+  const { data: accountsBalance } = useAccountsBalance()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       amount: "",
-      type: "expense",
+      type: "EXPENSE",
       category: "",
       account: "",
       date: new Date().toISOString().split('T')[0],
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
-    setOpen(false)
-    form.reset()
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      await createTransaction({
+        description: values.title,
+        amount: Number(values.amount.replace(',', '.')),
+        type: values.type,
+        category: values.category,
+        accountId: values.account,
+        occurredAt: new Date(values.date).toISOString()
+      })
+      setOpen(false)
+      form.reset()
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   return (
@@ -116,9 +131,8 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="expense">Despesa</SelectItem>
-                        <SelectItem value="income">Receita</SelectItem>
-                        <SelectItem value="transfer">Transferência</SelectItem>
+                        <SelectItem value="EXPENSE">Despesa</SelectItem>
+                        <SelectItem value="INCOME">Receita</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -143,9 +157,9 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="itau">Conta Itaú</SelectItem>
-                      <SelectItem value="nubank">Nubank</SelectItem>
-                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      {accountsBalance?.accounts.map(acc => (
+                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -199,7 +213,8 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
             </div>
 
             <DialogFooter className="pt-4">
-              <Button type="submit" className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
+              <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Lançamento
               </Button>
             </DialogFooter>

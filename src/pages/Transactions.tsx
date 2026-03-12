@@ -13,16 +13,25 @@ import {
   Plus,
   Calendar as CalendarIcon,
   Tag,
-  Download
+  Download,
+  MoreVertical
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useTransactions } from "@/hooks/use-transactions";
+import { useTransactions, useDeleteTransaction } from "@/hooks/use-transactions";
 import { useAccountsBalance } from "@/hooks/use-accounts";
+import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 
 export default function Transactions() {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: transactions } = useTransactions();
   const { data: accountsBalance } = useAccountsBalance();
+  const { mutate: deleteTransaction } = useDeleteTransaction();
 
   const getAccountName = (id: string) => {
     return accountsBalance?.accounts.find(a => a.id === id)?.name || 'Conta';
@@ -33,6 +42,33 @@ export default function Transactions() {
     (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
+  const exportToCSV = () => {
+    if (!filteredTransactions.length) return;
+    
+    const headers = ['Tipo', 'Descrição', 'Categoria', 'Conta', 'Data', 'Valor'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredTransactions.map(t => [
+        t.type,
+        `"${t.description.replace(/"/g, '""')}"`,
+        `"${t.category || ''}"`,
+        `"${getAccountName(t.accountId)}"`,
+        new Date(t.occurredAt).toISOString().split('T')[0],
+        t.amount
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lancamentos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -41,12 +77,14 @@ export default function Transactions() {
           <p className="text-muted-foreground text-sm">Gerencie todas as suas entradas, saídas e transferências.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={exportToCSV}>
             <Download className="w-4 h-4" /> Exportar CSV
           </Button>
-          <Button size="sm" className="gap-2">
-            <Plus className="w-4 h-4" /> Novo Lançamento
-          </Button>
+          <NewTransactionModal>
+            <Button size="sm" className="gap-2">
+              <Plus className="w-4 h-4" /> Novo Lançamento
+            </Button>
+          </NewTransactionModal>
         </div>
       </div>
 
@@ -86,6 +124,7 @@ export default function Transactions() {
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Conta</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Data</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Valor</th>
+                  <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -136,6 +175,26 @@ export default function Transactions() {
                           Math.abs(t.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         } />
                       </span>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Editar Lançamento</DropdownMenuItem>
+                          <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm("Deseja realmente excluir este lançamento?")) {
+                              deleteTransaction(t.id);
+                            }
+                          }}>
+                            Excluir Lançamento
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
