@@ -167,34 +167,32 @@ export default function Budgets() {
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-sm">{goal.title}</h3>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground -mr-2 -mt-1">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <AddGoalFundsModal goal={goal}>
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2 mb-1 text-primary">
-                                    <ArrowUpCircle className="w-4 h-4" /> Depositar
-                                  </DropdownMenuItem>
-                                </AddGoalFundsModal>
-                                <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
-                                  if (window.confirm("Deseja realmente excluir esta meta?")) {
-                                    deleteGoal(goal.id)
-                                  }
-                                }}>
-                                  Excluir Meta
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">Prazo: {new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(new Date(goal.deadline))}</p>
+                        <div className="flex-1 pr-8">
+                          <h3 className="font-bold text-sm">{goal.title}</h3>
+                          <p className="text-[11px] text-muted-foreground mt-1">Prazo: {new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(new Date(goal.deadline))}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground -mr-2 -mt-1">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <AddGoalFundsModal goal={goal}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2 mb-1 text-primary">
+                                  <ArrowUpCircle className="w-4 h-4" /> Depositar
+                                </DropdownMenuItem>
+                              </AddGoalFundsModal>
+                              <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
+                                if (window.confirm("Deseja realmente excluir esta meta?")) {
+                                  deleteGoal(goal.id)
+                                }
+                              }}>
+                                Excluir Meta
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <p className="text-xs font-bold text-primary mt-1">
                             {Math.round(percentage)}%
                           </p>
