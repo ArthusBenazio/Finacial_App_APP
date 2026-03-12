@@ -23,6 +23,7 @@ import { useAccountsBalance } from "@/hooks/use-accounts";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useBudgets } from "@/hooks/use-budgets";
 import { useGroups } from "@/hooks/use-groups";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const { data: accountsBalance } = useAccountsBalance();
@@ -107,7 +108,9 @@ export default function Dashboard() {
               <CardTitle className="text-base">Últimos Lançamentos</CardTitle>
               <CardDescription className="text-xs mt-1">Sua movimentação recente em todas as contas.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="h-8 text-xs rounded-full">Ver todos</Button>
+            <Button variant="outline" size="sm" className="h-8 text-xs rounded-full" asChild>
+              <Link to="/transactions">Ver todos</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
