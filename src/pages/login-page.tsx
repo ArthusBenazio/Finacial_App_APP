@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { LoginForm } from '../components/login-form'
 import { useAuth } from '../context/auth-context'
 
 export function LoginPage() {
@@ -25,46 +26,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-layout">
-      <section className="auth-card">
-        <p className="eyebrow">Welcome back</p>
-        <h1>Sign in to your workspace</h1>
-
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Email</span>
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@email.com"
-            />
-          </label>
-
-          <label className="field">
-            <span>Password</span>
-            <input
-              required
-              type="password"
-              minLength={6}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 6 characters"
-            />
-          </label>
-
-          {error ? <p className="form-error">{error}</p> : null}
-
-          <button type="submit" className="primary-btn" disabled={isLoading}>
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
-
-        <p className="auth-footer">
-          First time here? <Link to="/register">Create an account</Link>
-        </p>
-      </section>
+    <div className="flex min-h-screen items-center justify-center p-6 md:p-10 bg-gradient-to-br from-[#f8faf9] to-[#edf5f4]">
+      <div className="w-full max-w-sm">
+        <LoginForm
+          email={email}
+          password={password}
+          isLoading={isLoading}
+          error={error}
+          onLoginSubmit={handleSubmit}
+          onEmailChange={setEmail}
+          onPasswordChange={setPassword}
+        />
+      </div>
     </div>
   )
 }

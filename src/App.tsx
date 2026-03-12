@@ -1,14 +1,18 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AppShell } from './components/app-shell'
+import { DashboardLayout } from './components/layout/DashboardLayout'
 import { AuthGuard } from './components/auth-guard'
 import { useAuth } from './context/auth-context'
-import { AccountTransactionsPage } from './pages/account-transactions-page'
-import { DashboardPage } from './pages/dashboard-page'
+import { AuthCallbackPage } from './pages/auth-callback-page'
 import { InvitePage } from './pages/invite-page'
-import { InvitesPage } from './pages/invites-page'
 import { LoginPage } from './pages/login-page'
-import { NotFoundPage } from './pages/not-found-page'
 import { RegisterPage } from './pages/register-page'
+import Dashboard from './pages/Dashboard'
+import Transactions from './pages/Transactions'
+import Wallets from './pages/Wallets'
+import Budgets from './pages/Budgets'
+import Groups from './pages/Groups'
+import Settings from './pages/Settings'
+import NotFound from './pages/not-found'
 
 function PublicOnlyRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth()
@@ -46,41 +50,76 @@ export function App() {
         }
       />
 
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
       <Route
         path="/dashboard"
         element={
           <AuthGuard>
-            <AppShell>
-              <DashboardPage />
-            </AppShell>
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
           </AuthGuard>
         }
       />
 
       <Route
-        path="/accounts/:accountId"
+        path="/transactions"
         element={
           <AuthGuard>
-            <AppShell>
-              <AccountTransactionsPage />
-            </AppShell>
+            <DashboardLayout>
+              <Transactions />
+            </DashboardLayout>
           </AuthGuard>
         }
       />
 
       <Route
-        path="/invites"
+        path="/wallets"
         element={
           <AuthGuard>
-            <AppShell>
-              <InvitesPage />
-            </AppShell>
+            <DashboardLayout>
+              <Wallets />
+            </DashboardLayout>
+          </AuthGuard>
+        }
+      />
+
+      <Route
+        path="/budgets"
+        element={
+          <AuthGuard>
+            <DashboardLayout>
+              <Budgets />
+            </DashboardLayout>
+          </AuthGuard>
+        }
+      />
+
+      <Route
+        path="/groups"
+        element={
+          <AuthGuard>
+            <DashboardLayout>
+              <Groups />
+            </DashboardLayout>
+          </AuthGuard>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <AuthGuard>
+            <DashboardLayout>
+              <Settings />
+            </DashboardLayout>
           </AuthGuard>
         }
       />
 
       <Route path="/invite/:token" element={<InvitePage />} />
-      <Route path="*" element={<NotFoundPage />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

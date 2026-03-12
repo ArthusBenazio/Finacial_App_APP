@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: User | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  signInWithToken: (authToken: string) => void
   signOut: () => void
   refreshProfile: () => Promise<void>
 }
@@ -66,6 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function signInWithToken(authToken: string) {
+    localStorage.setItem(TOKEN_KEY, authToken)
+    setToken(authToken)
+  }
+
   function signOut() {
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
@@ -78,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       signIn,
+      signInWithToken,
       signOut,
       refreshProfile,
     }),
