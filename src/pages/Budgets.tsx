@@ -9,14 +9,25 @@ import {
   Plus,
   Flame,
   CheckCircle2,
-  PieChart
+  PieChart,
+  MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useBudgets } from "@/hooks/use-budgets";
-import { useGoals } from "@/hooks/use-goals";
+import { useBudgets, useDeleteBudget } from "@/hooks/use-budgets";
+import { useGoals, useDeleteGoal } from "@/hooks/use-goals";
+import { NewBudgetModal } from "@/components/modals/NewBudgetModal";
+import { NewGoalModal } from "@/components/modals/NewGoalModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 export default function Budgets() {
   const { data: budgets } = useBudgets();
   const { data: goals } = useGoals();
+  const { mutate: deleteBudget } = useDeleteBudget()
+  const { mutate: deleteGoal } = useDeleteGoal()
   
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -26,9 +37,25 @@ export default function Budgets() {
           <p className="text-muted-foreground text-sm">Planeje seus gastos e acompanhe seus objetivos financeiros.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus className="w-4 h-4" /> Criar Planejamento
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="rounded-full gap-2 px-4 py-2">
+                <Plus className="w-4 h-4" /> Criar Planejamento
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <NewBudgetModal>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2">
+                   <PieChart className="w-4 h-4" /> Novo Orçamento Mensal
+                 </DropdownMenuItem>
+              </NewBudgetModal>
+              <NewGoalModal>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2">
+                   <Target className="w-4 h-4" /> Nova Meta de Economia
+                 </DropdownMenuItem>
+              </NewGoalModal>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -57,10 +84,28 @@ export default function Budgets() {
               <Card key={budget.id} className="border-border/50 shadow-sm overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: budget.categoryRel?.color || budget.color }} />
-                        <p className="font-bold text-sm">{budget.categoryRel?.name ?? budget.category ?? 'Sem Categoria'}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: budget.categoryRel?.color || budget.color }} />
+                          <p className="font-bold text-sm">{budget.categoryRel?.name ?? budget.category ?? 'Sem Categoria'}</p>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground -mr-2">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
+                              if (window.confirm("Deseja realmente excluir este orçamento?")) {
+                                deleteBudget(budget.id)
+                              }
+                            }}>
+                              Excluir Orçamento
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
                         Restam <PrivateValue value={Math.max(0, budget.limit - budget.spent).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
@@ -120,12 +165,30 @@ export default function Budgets() {
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-sm">{goal.title}</h3>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-sm">{goal.title}</h3>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground -mr-2 -mt-1">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
+                                  if (window.confirm("Deseja realmente excluir esta meta?")) {
+                                    deleteGoal(goal.id)
+                                  }
+                                }}>
+                                  Excluir Meta
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                           <p className="text-[11px] text-muted-foreground">Prazo: {new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(new Date(goal.deadline))}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-bold text-primary">
+                          <p className="text-xs font-bold text-primary mt-1">
                             {Math.round(percentage)}%
                           </p>
                         </div>

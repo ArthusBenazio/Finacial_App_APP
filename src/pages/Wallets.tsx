@@ -46,7 +46,7 @@ export default function Wallets() {
             Nenhuma conta cadastrada.
           </div>
         ) : accounts.map((account) => (
-          <Card key={account.id} className="group relative overflow-hidden border-border/50 hover:border-primary/50 transition-all hover:shadow-md cursor-pointer">
+          <Card key={account.id} className="group relative overflow-hidden border-border/50 hover:border-primary/50 transition-all hover:shadow-md">
             <div className="absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 opacity-5 rounded-full bg-primary"></div>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -55,7 +55,7 @@ export default function Wallets() {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group relative z-10">
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
