@@ -21,18 +21,28 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, Plus, Target } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useCreateGoal } from "@/hooks/use-goals"
+import { useAccounts } from "@/hooks/use-accounts"
 import { NumericFormat } from "react-number-format"
 
 const formSchema = z.object({
   title: z.string().min(2, "Título é obrigatório"),
   target: z.string().min(1, "O valor objetivo é obrigatório"),
   deadline: z.string().min(1, "O prazo é obrigatório"),
+  accountId: z.string().optional(),
 })
 
 export function NewGoalModal({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
   const { mutateAsync: createGoal, isPending } = useCreateGoal()
+  const { data: accounts } = useAccounts()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,6 +50,7 @@ export function NewGoalModal({ children }: { children?: React.ReactNode }) {
       title: "",
       target: "",
       deadline: "",
+      accountId: "none",
     },
   })
 
@@ -47,12 +58,14 @@ export function NewGoalModal({ children }: { children?: React.ReactNode }) {
     try {
       const parsedTarget = Number(values.target.replace(/\./g, '').replace(',', '.'))
 
-      // Assume an arbitrary default icon 'Target'
+      const accountIdValue = values.accountId === "none" || !values.accountId ? undefined : values.accountId
+
       await createGoal({
         title: values.title,
         target: parsedTarget,
         deadline: new Date(values.deadline).toISOString(),
         icon: "Target",
+        accountId: accountIdValue,
       })
       
       setOpen(false)
@@ -133,6 +146,35 @@ export function NewGoalModal({ children }: { children?: React.ReactNode }) {
                   <FormControl>
                     <Input type="date" {...field} className="h-11 bg-muted/30 border-none" />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="accountId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Associar Conta (Opcional)</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-11 bg-muted/30 border-none">
+                        <SelectValue placeholder="Sem associação" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        Sem associação (Livre)
+                      </SelectItem>
+                      {accounts?.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Se você escolher uma Carteira, depósitos na meta vão descontar do saldo dela.</p>
                   <FormMessage />
                 </FormItem>
               )}

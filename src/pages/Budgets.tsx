@@ -10,13 +10,15 @@ import {
   Flame,
   CheckCircle2,
   PieChart,
-  MoreHorizontal
+  MoreHorizontal,
+  ArrowUpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBudgets, useDeleteBudget } from "@/hooks/use-budgets";
 import { useGoals, useDeleteGoal } from "@/hooks/use-goals";
 import { NewBudgetModal } from "@/components/modals/NewBudgetModal";
 import { NewGoalModal } from "@/components/modals/NewGoalModal";
+import { AddGoalFundsModal } from "@/components/modals/AddGoalFundsModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -175,6 +177,11 @@ export default function Budgets() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <AddGoalFundsModal goal={goal}>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer gap-2 mb-1 text-primary">
+                                    <ArrowUpCircle className="w-4 h-4" /> Depositar
+                                  </DropdownMenuItem>
+                                </AddGoalFundsModal>
                                 <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
                                   if (window.confirm("Deseja realmente excluir esta meta?")) {
                                     deleteGoal(goal.id)

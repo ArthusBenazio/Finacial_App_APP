@@ -8,6 +8,7 @@ export interface Goal {
   current: number
   deadline: string
   icon: string
+  accountId: string | null
   userId: string
   createdAt: string
   updatedAt: string
@@ -28,6 +29,7 @@ interface CreateGoalData {
   target: number
   deadline: string
   icon?: string
+  accountId?: string | null
 }
 
 export function useCreateGoal() {
@@ -53,6 +55,22 @@ export function useDeleteGoal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] })
+    },
+  })
+}
+
+export function useAddGoalFunds() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ goalId, amount }: { goalId: string; amount: number }) => {
+      const response = await http.patch<{ goal: Goal }>(`/goals/${goalId}/add-funds`, { amount })
+      return response.data.goal
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
