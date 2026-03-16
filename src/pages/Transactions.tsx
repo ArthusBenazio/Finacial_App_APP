@@ -6,15 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { PrivateValue } from "@/components/PrivateValue";
 import { 
   Search, 
-  Filter, 
   ArrowUpRight, 
   ArrowDownRight, 
   ArrowLeftRight,
   Plus,
   Calendar as CalendarIcon,
-  Tag,
   Download,
-  MoreVertical
+  MoreVertical,
+  Clock
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,16 +21,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useTransactions, useDeleteTransaction } from "@/hooks/use-transactions";
-import { useAccountsBalance } from "@/hooks/use-accounts";
+import { useAccounts, useAccountsBalance } from "@/hooks/use-accounts";
 import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 import { EditTransactionModal } from "@/components/modals/EditTransactionModal";
 import { Transaction } from "@/hooks/use-transactions";
 
 export default function Transactions() {
+  const currentDate = new Date();
+  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
+
   const { data: transactions } = useTransactions();
+  const { data: accounts } = useAccounts();
   const { data: accountsBalance } = useAccountsBalance();
   const { mutate: deleteTransaction } = useDeleteTransaction();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -41,16 +54,120 @@ export default function Transactions() {
     return accountsBalance?.accounts.find(a => a.id === id)?.name || 'Conta';
   }
 
-  const filteredTransactions = transactions?.filter(t => 
-    t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (t.categoryRel && t.categoryRel.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()))
-  ) || [];
+  const formatMonth = (monthStr: string) => {
+    if (monthStr === "all") return "Todos os meses";
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const formatted = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(date);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  };
+
+  const availableMonths = Array.from(new Set([
+    currentMonthStr,
+    ...(transactions?.map(t => {
+      const d = new Date(t.occurredAt);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    }) || [])
+  ])).sort().reverse();
+
+  // Calcular saldos ao longo do tempo (saldos após cada transação, incluindo futuras)
+  const transactionBalances = new Map<string, { source: number, dest?: number, global: number, projected: boolean }>();
+  
+  if (transactions && accounts) {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+
+    // accounts.balance JÁ inclui TODAS as transações (passadas e futuras).
+    // Para chegar no saldo ANTES de qualquer transação, desfazemos TODAS elas.
+    const initialBalances: Record<string, number> = {};
+    accounts.forEach(acc => {
+      let totalDelta = 0;
+      transactions.forEach(t => {
+        const amount = Math.abs(Number(t.amount));
+        if (t.accountId === acc.id) {
+          if (t.type === 'INCOME') totalDelta += amount;
+          if (t.type === 'EXPENSE') totalDelta -= amount;
+          if (t.type === 'TRANSFER') totalDelta -= amount;
+        }
+        if (t.destinationAccountId === acc.id && t.type === 'TRANSFER') {
+          totalDelta += amount;
+        }
+      });
+      // saldo antes de qualquer transação
+      initialBalances[acc.id] = acc.balance - totalDelta;
+    });
+
+    const currentBalances = { ...initialBalances };
+    
+    // Ordenar do mais antigo pro mais novo para calcular correntamente
+    const sortedTransactions = [...transactions].sort((a, b) => {
+      const diff = new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
+      if (diff !== 0) return diff;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    sortedTransactions.forEach(t => {
+      const transactionDate = new Date(t.occurredAt);
+      const isFuture = transactionDate > now;
+
+      const amount = Math.abs(Number(t.amount));
+      if (t.type === 'INCOME') {
+        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) + amount;
+      } else if (t.type === 'EXPENSE') {
+        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) - amount;
+      } else if (t.type === 'TRANSFER') {
+        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) - amount;
+        if (t.destinationAccountId) {
+          currentBalances[t.destinationAccountId] = (currentBalances[t.destinationAccountId] || 0) + amount;
+        }
+      }
+
+      const globalBalance = Object.values(currentBalances).reduce((sum, val) => sum + val, 0);
+
+      transactionBalances.set(t.id, { 
+        source: currentBalances[t.accountId], 
+        dest: t.destinationAccountId ? currentBalances[t.destinationAccountId] : undefined,
+        global: globalBalance,
+        projected: isFuture
+      });
+    });
+  }
+
+  const getTransactionBalance = (t: Transaction, selectedAccId: string) => {
+    const balances = transactionBalances.get(t.id);
+    if (!balances) return null;
+
+    if (selectedAccId === "all") {
+      return { value: balances.global, projected: balances.projected };
+    }
+    
+    if (t.type === 'TRANSFER' && selectedAccId === t.destinationAccountId && balances.dest !== undefined) {
+      return { value: balances.dest, projected: balances.projected };
+    }
+    
+    return { value: balances.source, projected: balances.projected };
+  };
+
+  const filteredTransactions = transactions?.filter(t => {
+    const transactionDate = new Date(t.occurredAt);
+    const transactionMonth = `${transactionDate.getUTCFullYear()}-${String(transactionDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    
+    const matchesSearch = 
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (t.categoryRel && t.categoryRel.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesMonth = selectedMonth === "all" || transactionMonth === selectedMonth;
+
+    const matchesAccount = selectedAccountId === "all" || t.accountId === selectedAccountId || t.destinationAccountId === selectedAccountId;
+
+    return matchesSearch && matchesMonth && matchesAccount;
+  }) || [];
 
   const exportToCSV = () => {
     if (!filteredTransactions.length) return;
     
-    const headers = ['Tipo', 'Descrição', 'Categoria', 'Conta', 'Data', 'Valor'];
+    const headers = ['Tipo', 'Descrição', 'Categoria', 'Conta', 'Data', 'Valor', 'Saldo'];
     const csvContent = [
       headers.join(','),
       ...filteredTransactions.map(t => [
@@ -59,7 +176,8 @@ export default function Transactions() {
         `"${t.category || ''}"`,
         `"${getAccountName(t.accountId)}"`,
         new Date(t.occurredAt).toISOString().split('T')[0],
-        t.amount
+        t.amount,
+        getTransactionBalance(t, selectedAccountId) || 0
       ].join(','))
     ].join('\n');
 
@@ -106,15 +224,36 @@ export default function Transactions() {
               />
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-              <Button variant="outline" size="sm" className="h-9 gap-2 whitespace-nowrap">
-                <Filter className="w-4 h-4" /> Filtros
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 gap-2 whitespace-nowrap">
-                <CalendarIcon className="w-4 h-4" /> Fevereiro
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 gap-2 whitespace-nowrap text-primary border-primary/20 bg-primary/5">
-                Todas as Contas
-              </Button>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-[180px] h-9 bg-background">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground hidden sm:block" />
+                    <SelectValue placeholder="Selecione o mês" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {availableMonths.map(month => (
+                    <SelectItem key={month} value={month}>
+                      {formatMonth(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="w-[180px] h-9 text-primary border-primary/20 bg-primary/5">
+                  <SelectValue placeholder="Todas as Contas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Contas</SelectItem>
+                  {accountsBalance?.accounts.map(acc => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -129,13 +268,14 @@ export default function Transactions() {
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Conta</th>
                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Data</th>
                   <th className="text-right py-3 px-4 font-medium text-muted-foreground">Valor</th>
+                  <th className="text-right py-3 px-4 font-medium text-muted-foreground">Saldo</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
                 {!filteredTransactions.length ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                    <td colSpan={8} className="text-center py-6 text-muted-foreground">
                       Nenhuma transação encontrada.
                     </td>
                   </tr>
@@ -188,19 +328,36 @@ export default function Transactions() {
                       )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
-                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(t.occurredAt))}
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(t.occurredAt))}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className={cn(
                         "font-semibold",
                         t.type === 'INCOME' ? "text-emerald-600" :
-                        t.type === 'EXPENSE' ? "text-foreground" : "text-blue-600"
+                        t.type === 'EXPENSE' ? "text-rose-600" : "text-blue-600"
                       )}>
                         <PrivateValue value={
                           (t.type === 'EXPENSE' ? "-" : t.type === 'INCOME' ? "+" : "") + 
                           Math.abs(t.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         } />
                       </span>
+                    </td>
+                    <td className="py-4 px-4 text-right whitespace-nowrap">
+                      {(() => {
+                        const bal = getTransactionBalance(t, selectedAccountId);
+                        if (bal === null) return <span className="text-muted-foreground/50 text-xs">-</span>;
+                        return (
+                          <span className={cn(
+                            "text-sm inline-flex items-center gap-1",
+                            bal.projected
+                              ? bal.value >= 0 ? "text-emerald-500/60" : "text-rose-500/60"
+                              : bal.value >= 0 ? "text-emerald-600/80" : "text-rose-600/80"
+                          )}>
+                            {bal.projected && <Clock className="w-3 h-3 opacity-60" />}
+                            <PrivateValue value={bal.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <DropdownMenu>
