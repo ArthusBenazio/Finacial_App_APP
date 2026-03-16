@@ -50,7 +50,7 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { useBudgets } from "@/hooks/use-budgets";
 import { useGroups } from "@/hooks/use-groups";
 import { Link } from "react-router-dom";
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, addDays } from "date-fns";
+import { format, subMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -102,6 +102,9 @@ export default function Dashboard() {
   // toggle: top 5 gastos ou receitas
   const [categoryMode, setCategoryMode] = useState<"EXPENSE" | "INCOME">("EXPENSE");
 
+  // filtro de período do gráfico
+  const [chartPeriod, setChartPeriod] = useState<3 | 6 | 12>(6);
+
   // select de carteiras (null = todas selecionadas)
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string> | null>(null);
 
@@ -151,15 +154,17 @@ export default function Dashboard() {
   }, [isAllSelected, activeIds, allAccounts]);
 
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  // Usar UTC para evitar bug de timezone: datas gravadas em UTC no banco
+  // não devem ser convertidas para hora local (ex: 2026-03-01T00:00Z = 2026-02-28T21:00-0300)
+  const currentMonth = now.getUTCMonth();
+  const currentYear = now.getUTCFullYear();
 
-  // ── Transações do mês atual ──
+  // ── Transações do mês atual (comparando em UTC, igual à tela de Lançamentos) ──
   const currentMonthTransactions = useMemo(
     () =>
       (transactions ?? []).filter((t) => {
         const d = new Date(t.occurredAt);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        return d.getUTCMonth() === currentMonth && d.getUTCFullYear() === currentYear;
       }),
     [transactions, currentMonth, currentYear]
   );
@@ -205,27 +210,26 @@ export default function Dashboard() {
   // ── Últimas 5 transações ──
   const recentTransactions = useMemo(() => transactions?.slice(0, 5) ?? [], [transactions]);
 
-  // ── Gráfico de evolução (6 meses) ──
+  // ── Gráfico de evolução (período dinâmico) — comparando em UTC ──
   const chartData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const ref = subMonths(now, 5 - i);
-      const m = ref.getMonth();
-      const y = ref.getFullYear();
-      const start = startOfMonth(ref);
-      const end = endOfMonth(ref);
+    return Array.from({ length: chartPeriod }, (_, i) => {
+      const ref = subMonths(now, chartPeriod - 1 - i);
+      // Usar getUTC* para ser consistente com o armazenamento UTC do banco
+      const refYear = ref.getUTCFullYear();
+      const refMonth = ref.getUTCMonth();
       const monthTxs = (transactions ?? []).filter((t) => {
         const d = new Date(t.occurredAt);
-        return isWithinInterval(d, { start, end });
+        return d.getUTCFullYear() === refYear && d.getUTCMonth() === refMonth;
       });
       const rec = monthTxs.filter((t) => t.type === "INCOME").reduce((a, t) => a + t.amount, 0);
       const desp = monthTxs.filter((t) => t.type === "EXPENSE").reduce((a, t) => a + t.amount, 0);
       return {
-        mes: format(ref, "MMM", { locale: ptBR }),
+        mes: format(ref, chartPeriod === 12 ? "MMM/yy" : "MMM", { locale: ptBR }),
         Receitas: rec,
         Despesas: desp,
       };
     });
-  }, [transactions]);
+  }, [transactions, chartPeriod]);
 
   // ── Saúde financeira ──
   const healthPct = receitas > 0 ? Math.round(((receitas - despesas) / receitas) * 100) : 0;
@@ -400,16 +404,34 @@ export default function Dashboard() {
 
       {/* ── Linha 2: Gráfico + Saúde Financeira ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Gráfico de linha (6 meses) */}
+        {/* Gráfico de linha (período dinâmico) */}
         <Card className="lg:col-span-2 shadow-sm border-border/50">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-primary" />
-                  Evolução dos últimos 6 meses
+                  Evolução dos últimos{" "}
+                  {chartPeriod === 3 ? "3 meses" : chartPeriod === 6 ? "6 meses" : "12 meses"}
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">Receitas vs Despesas por mês</CardDescription>
+              </div>
+              {/* Toggle de período */}
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                {([3, 6, 12] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p)}
+                    className={cn(
+                      "text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition-all duration-200",
+                      chartPeriod === p
+                        ? "bg-background shadow-sm text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {p === 3 ? "3M" : p === 6 ? "6M" : "12M"}
+                  </button>
+                ))}
               </div>
             </div>
           </CardHeader>
