@@ -21,6 +21,12 @@ export interface Transaction {
   createdAt: string
   groupId: string | null
   isShared: boolean
+  // recurring fields
+  isRecurring: boolean
+  recurringGroupId: string | null
+  recurringIndex: number | null
+  recurringTotal: number | null
+  recurringInterval: 'MONTHLY' | 'WEEKLY' | 'YEARLY' | null
 }
 
 export function useTransactions() {
@@ -41,6 +47,10 @@ interface CreateTransactionData {
   accountId: string
   destinationAccountId?: string
   occurredAt: string
+  // recurring
+  isRecurring?: boolean
+  recurringCount?: number
+  recurringInterval?: 'MONTHLY' | 'WEEKLY' | 'YEARLY'
 }
 
 export function useCreateTransaction() {
@@ -72,7 +82,21 @@ export function useDeleteTransaction() {
   })
 }
 
-interface UpdateTransactionData extends CreateTransactionData {
+export function useDeleteRecurringGroup() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      await http.delete(`/transactions/recurring/${groupId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+    },
+  })
+}
+
+interface UpdateTransactionData extends Omit<CreateTransactionData, 'isRecurring' | 'recurringCount' | 'recurringInterval'> {
   id: string
 }
 

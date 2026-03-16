@@ -13,7 +13,8 @@ import {
   Calendar as CalendarIcon,
   Download,
   MoreVertical,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useTransactions, useDeleteTransaction } from "@/hooks/use-transactions";
+import { useTransactions, useDeleteTransaction, useDeleteRecurringGroup } from "@/hooks/use-transactions";
 import { useAccounts, useAccountsBalance } from "@/hooks/use-accounts";
 import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 import { EditTransactionModal } from "@/components/modals/EditTransactionModal";
@@ -47,6 +48,7 @@ export default function Transactions() {
   const { data: accounts } = useAccounts();
   const { data: accountsBalance } = useAccountsBalance();
   const { mutate: deleteTransaction } = useDeleteTransaction();
+  const { mutate: deleteRecurringGroup } = useDeleteRecurringGroup();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -294,8 +296,16 @@ export default function Transactions() {
                       </div>
                     </td>
                     <td className="py-4 px-4 font-medium">
-                      <div className="flex flex-col">
-                        <span className="text-foreground">{t.description}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-foreground">{t.description}</span>
+                          {t.isRecurring && t.recurringIndex && t.recurringTotal && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-50 text-violet-600 border border-violet-200">
+                              <RefreshCw className="w-2.5 h-2.5" />
+                              {t.recurringIndex}/{t.recurringTotal}
+                            </span>
+                          )}
+                        </div>
                         {t.type === 'TRANSFER' && (
                           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Transferência</span>
                         )}
@@ -366,7 +376,7 @@ export default function Transactions() {
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuItem onClick={(e) => {
                             e.stopPropagation();
                             setEditingTransaction(t);
@@ -374,14 +384,31 @@ export default function Transactions() {
                           }}>
                             Editar Lançamento
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm("Deseja realmente excluir este lançamento?")) {
-                              deleteTransaction(t.id);
-                            }
-                          }}>
-                            Excluir Lançamento
+                          <DropdownMenuItem
+                            className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm("Deseja realmente excluir este lançamento?")) {
+                                deleteTransaction(t.id);
+                              }
+                            }}
+                          >
+                            Excluir este lançamento
                           </DropdownMenuItem>
+                          {t.isRecurring && t.recurringGroupId && (
+                            <DropdownMenuItem
+                              className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Deseja excluir TODOS os ${t.recurringTotal} lançamentos desta série?`)) {
+                                  deleteRecurringGroup(t.recurringGroupId!);
+                                }
+                              }}
+                            >
+                              <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                              Excluir toda a série
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
