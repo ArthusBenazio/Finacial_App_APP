@@ -27,14 +27,14 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Wallet, Tag, Calendar as CalendarIcon, Loader2 } from "lucide-react"
-import { useCreateTransaction } from "@/hooks/use-transactions"
+import { Wallet, Tag, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { useUpdateTransaction, Transaction } from "@/hooks/use-transactions"
 import { useAccountsBalance } from "@/hooks/use-accounts"
 import { useCategories } from "@/hooks/use-categories"
 import { NewCategoryModal } from "./NewCategoryModal"
 
 const formSchema = z.object({
-  title: z.string().min(2, "Título é obrigatório"),
+  description: z.string().min(2, "Descrição é obrigatória"),
   amount: z.string().min(1, "Valor é obrigatório"),
   type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]),
   category: z.string().optional(),
@@ -55,32 +55,53 @@ const formSchema = z.object({
   path: ["destinationAccount"]
 })
 
-export function NewTransactionModal({ children }: { children?: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false)
-  const [newCatOpen, setNewCatOpen] = React.useState(false) // State to control NewCategoryModal independently
-  const { mutateAsync: createTransaction, isPending } = useCreateTransaction()
+interface EditTransactionModalProps {
+  transaction: Transaction
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function EditTransactionModal({ transaction, open, onOpenChange }: EditTransactionModalProps) {
+  const [newCatOpen, setNewCatOpen] = React.useState(false)
+  const { mutateAsync: updateTransaction, isPending } = useUpdateTransaction()
   const { data: accountsBalance } = useAccountsBalance()
   const { data: categories } = useCategories()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      amount: "",
-      type: "EXPENSE",
-      category: "",
-      account: "",
-      destinationAccount: "",
-      date: new Date().toLocaleDateString('en-CA'),
+      description: transaction.description,
+      amount: Math.abs(transaction.amount).toString(),
+      type: transaction.type,
+      category: transaction.categoryId || "",
+      account: transaction.accountId,
+      destinationAccount: transaction.destinationAccountId || "",
+      date: new Date(transaction.occurredAt).toISOString().split('T')[0],
     },
   })
+
+  // Update form defaults when transaction changes
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        description: transaction.description,
+        amount: Math.abs(transaction.amount).toString(),
+        type: transaction.type,
+        category: transaction.categoryId || "",
+        account: transaction.accountId,
+        destinationAccount: transaction.destinationAccountId || "",
+        date: new Date(transaction.occurredAt).toISOString().split('T')[0],
+      })
+    }
+  }, [transaction, open, form])
 
   const transactionType = form.watch("type")
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await createTransaction({
-        description: values.title,
+      await updateTransaction({
+        id: transaction.id,
+        description: values.description,
         amount: Number(values.amount.replace(',', '.')),
         type: values.type,
         categoryId: values.type !== 'TRANSFER' ? values.category : undefined,
@@ -88,32 +109,23 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
         destinationAccountId: values.type === 'TRANSFER' ? values.destinationAccount : undefined,
         occurredAt: new Date(values.date).toISOString()
       })
-      setOpen(false)
-      form.reset()
+      onOpenChange(false)
     } catch (error) {
       console.error(error)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button className="gap-2 rounded-full shadow-sm">
-            <Plus className="w-4 h-4" />
-            Lançamento
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Novo Lançamento</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Editar Lançamento</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
               control={form.control}
-              name="title"
+              name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>O que foi?</FormLabel>
@@ -145,7 +157,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-11 bg-muted/30 border-none">
                           <SelectValue placeholder="Tipo" />
@@ -169,7 +181,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{transactionType === 'TRANSFER' ? 'De qual conta?' : 'Qual conta?'}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-11 bg-muted/30 border-none">
                         <div className="flex items-center gap-2">
@@ -196,7 +208,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Para qual conta?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-11 bg-muted/30 border-none">
                           <div className="flex items-center gap-2">
@@ -227,7 +239,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-11 bg-muted/30 border-none">
                             <div className="flex items-center gap-2">
@@ -236,34 +248,34 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                             </div>
                           </SelectTrigger>
                         </FormControl>
-                      <SelectContent>
-                        {!categories?.length && (
-                          <div className="text-xs text-muted-foreground p-2 text-center">Nenhuma categoria</div>
-                        )}
-                        {categories?.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                              {cat.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                        <div className="p-1 mt-1 border-t border-border/50">
-                          <NewCategoryModal open={newCatOpen} onOpenChange={setNewCatOpen}>
-                            <Button 
-                              variant="ghost" 
-                              className="w-full justify-start text-xs h-8 gap-2 bg-primary/5 text-primary hover:bg-primary/10"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setNewCatOpen(true);
-                              }}
-                            >
-                              <Plus className="w-3 h-3" /> Criar Categoria
-                            </Button>
-                          </NewCategoryModal>
-                        </div>
-                      </SelectContent>
+                        <SelectContent>
+                          {!categories?.length && (
+                            <div className="text-xs text-muted-foreground p-2 text-center">Nenhuma categoria</div>
+                          )}
+                          {categories?.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                                {cat.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                          <div className="p-1 mt-1 border-t border-border/50">
+                            <NewCategoryModal open={newCatOpen} onOpenChange={setNewCatOpen}>
+                              <Button 
+                                variant="ghost" 
+                                className="w-full justify-start text-xs h-8 gap-2 bg-primary/5 text-primary hover:bg-primary/10"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setNewCatOpen(true);
+                                }}
+                              >
+                                <Plus className="w-3 h-3" /> Criar Categoria
+                              </Button>
+                            </NewCategoryModal>
+                          </div>
+                        </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -293,12 +305,32 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
             <DialogFooter className="pt-4">
               <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Lançamento
+                Atualizar Lançamento
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function Plus(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </svg>
   )
 }

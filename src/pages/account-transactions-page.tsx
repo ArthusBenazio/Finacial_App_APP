@@ -259,7 +259,7 @@ export function AccountTransactionsPage() {
                           {transaction.category ?? 'No category'}
                         </span>
                         <span className="text-muted-foreground/50">•</span>
-                        <span>{new Date(transaction.occurredAt).toLocaleDateString('pt-BR')}</span>
+                        <span>{new Date(transaction.occurredAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                       </p>
                     </div>
 

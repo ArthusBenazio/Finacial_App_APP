@@ -26,12 +26,16 @@ import { cn } from "@/lib/utils";
 import { useTransactions, useDeleteTransaction } from "@/hooks/use-transactions";
 import { useAccountsBalance } from "@/hooks/use-accounts";
 import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
+import { EditTransactionModal } from "@/components/modals/EditTransactionModal";
+import { Transaction } from "@/hooks/use-transactions";
 
 export default function Transactions() {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: transactions } = useTransactions();
   const { data: accountsBalance } = useAccountsBalance();
   const { mutate: deleteTransaction } = useDeleteTransaction();
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const getAccountName = (id: string) => {
     return accountsBalance?.accounts.find(a => a.id === id)?.name || 'Conta';
@@ -152,10 +156,17 @@ export default function Transactions() {
                     <td className="py-4 px-4 font-medium">
                       <div className="flex flex-col">
                         <span className="text-foreground">{t.description}</span>
+                        {t.type === 'TRANSFER' && (
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Transferência</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      {t.categoryRel ? (
+                      {t.type === 'TRANSFER' ? (
+                        <Badge variant="outline" className="font-normal text-[11px] bg-blue-50 text-blue-600 border-blue-200">
+                          Transferência
+                        </Badge>
+                      ) : t.categoryRel ? (
                         <Badge variant="outline" className="font-normal text-[11px] border-transparent" style={{ backgroundColor: `${t.categoryRel.color}15`, color: t.categoryRel.color }}>
                           {t.categoryRel.name}
                         </Badge>
@@ -166,10 +177,18 @@ export default function Transactions() {
                       )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground">
-                      {getAccountName(t.accountId)}
+                      {t.type === 'TRANSFER' ? (
+                        <div className="flex items-center gap-1 text-[11px] font-medium">
+                          <span className="text-rose-600">{getAccountName(t.accountId)}</span>
+                          <ArrowLeftRight className="w-3 h-3" />
+                          <span className="text-emerald-600">{getAccountName(t.destinationAccountId || '')}</span>
+                        </div>
+                      ) : (
+                        getAccountName(t.accountId)
+                      )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
-                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(t.occurredAt))}
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(t.occurredAt))}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className={cn(
@@ -191,7 +210,13 @@ export default function Transactions() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Editar Lançamento</DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTransaction(t);
+                            setIsEditModalOpen(true);
+                          }}>
+                            Editar Lançamento
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
                             e.stopPropagation();
                             if (window.confirm("Deseja realmente excluir este lançamento?")) {
@@ -210,6 +235,14 @@ export default function Transactions() {
           </div>
         </CardContent>
       </Card>
+
+      {editingTransaction && (
+        <EditTransactionModal 
+          transaction={editingTransaction} 
+          open={isEditModalOpen} 
+          onOpenChange={setIsEditModalOpen} 
+        />
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ export interface Transaction {
   id: string
   description: string
   amount: number
-  type: 'INCOME' | 'EXPENSE'
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER'
   category: string | null
   categoryId: string | null
   categoryRel: {
@@ -16,6 +16,7 @@ export interface Transaction {
   } | null
   occurredAt: string
   accountId: string
+  destinationAccountId: string | null
   userId: string
   createdAt: string
   groupId: string | null
@@ -35,9 +36,10 @@ export function useTransactions() {
 interface CreateTransactionData {
   description: string
   amount: number
-  type: 'INCOME' | 'EXPENSE'
-  categoryId: string
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER'
+  categoryId?: string
   accountId: string
+  destinationAccountId?: string
   occurredAt: string
 }
 
@@ -62,6 +64,25 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: async (transactionId: string) => {
       await http.delete(`/transactions/${transactionId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+    },
+  })
+}
+
+interface UpdateTransactionData extends CreateTransactionData {
+  id: string
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: UpdateTransactionData) => {
+      const response = await http.put<{ transaction: Transaction }>(`/transactions/${id}`, data)
+      return response.data.transaction
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
