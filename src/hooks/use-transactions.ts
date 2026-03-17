@@ -63,7 +63,8 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
     },
   })
 }
@@ -77,7 +78,8 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
     },
   })
 }
@@ -91,7 +93,8 @@ export function useDeleteRecurringGroup() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
     },
   })
 }
@@ -110,7 +113,8 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['accounts-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
     },
   })
 }

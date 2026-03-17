@@ -150,7 +150,7 @@ export default function Transactions() {
     return { value: balances.source, projected: balances.projected };
   };
 
-  const filteredTransactions = transactions?.filter(t => {
+  const filteredTransactions = (transactions?.filter(t => {
     const transactionDate = new Date(t.occurredAt);
     const transactionMonth = `${transactionDate.getUTCFullYear()}-${String(transactionDate.getUTCMonth() + 1).padStart(2, '0')}`;
     
@@ -164,7 +164,12 @@ export default function Transactions() {
     const matchesAccount = selectedAccountId === "all" || t.accountId === selectedAccountId || t.destinationAccountId === selectedAccountId;
 
     return matchesSearch && matchesMonth && matchesAccount;
-  }) || [];
+  }) || []).sort((a, b) => {
+    // Mesmo critério de ordenação usado no cálculo dos saldos (mais novo primeiro para exibição)
+    const diff = new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime();
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   const exportToCSV = () => {
     if (!filteredTransactions.length) return;
