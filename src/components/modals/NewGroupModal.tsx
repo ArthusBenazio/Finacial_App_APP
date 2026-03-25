@@ -59,15 +59,15 @@ export function NewGroupModal({ children, open, onOpenChange }: NewGroupModalPro
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Criar Novo Perfil Financeiro</DialogTitle>
+            <DialogTitle>Criar Nova Conta Financeira</DialogTitle>
             <DialogDescription>
-              Cada perfil tem suas próprias contas, categorias e transações. 
+              Cada conta financeira engloba seus próprios bancos, carteiras e transações. 
               Ideal para separar vida pessoal da empresarial.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nome do Perfil</Label>
+              <Label htmlFor="name">Nome da Conta</Label>
               <Input
                 id="name"
                 placeholder="Ex: Pessoal, Empresa, Investimentos"
@@ -80,7 +80,7 @@ export function NewGroupModal({ children, open, onOpenChange }: NewGroupModalPro
               <Label htmlFor="description">Descrição (Opcional)</Label>
               <Textarea
                 id="description"
-                placeholder="Uma breve descrição sobre este perfil."
+                placeholder="Uma breve descrição sobre esta conta."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -97,7 +97,7 @@ export function NewGroupModal({ children, open, onOpenChange }: NewGroupModalPro
                   Criando...
                 </>
               ) : (
-                'Criar Perfil'
+                'Criar Conta'
               )}
             </Button>
           </DialogFooter>

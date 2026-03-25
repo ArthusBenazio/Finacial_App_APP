@@ -41,8 +41,10 @@ export function SelectGroupPage() {
           </h1>
           <p className="text-muted-foreground">
             {hasGroups 
-              ? "Escolha qual perfil financeiro você deseja acessar hoje." 
-              : "Vamos começar sua organização financeira criando seu primeiro perfil."}
+              ? "Escolha qual conta você deseja acessar hoje." 
+              : user?.isFirstAccess 
+                ? "Vamos começar sua organização financeira criando sua primeira conta."
+                : "Você não possui nenhuma conta ativa no momento. Vamos criar uma nova?"}
           </p>
         </div>
 
@@ -65,7 +67,7 @@ export function SelectGroupPage() {
                   </div>
                   <div className="space-y-1">
                     <CardTitle className="text-lg">{group.name}</CardTitle>
-                    <CardDescription className="line-clamp-1">{group.description || 'Perfil compartilhado'}</CardDescription>
+                    <CardDescription className="line-clamp-1">{group.description || 'Conta compartilhada'}</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="flex items-center justify-between pt-0">
@@ -78,9 +80,9 @@ export function SelectGroupPage() {
             <NewGroupModal>
               <Card className="border-dashed flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Plus className="w-6 h-6 text-muted-foreground" />
+                   <Plus className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium">Criar Novo Perfil</h3>
+                <h3 className="font-medium">Criar Nova Conta</h3>
                 <p className="text-xs text-muted-foreground text-center mt-1">Configure uma nova conta compartilhada ou pessoal.</p>
               </Card>
             </NewGroupModal>
@@ -90,7 +92,7 @@ export function SelectGroupPage() {
             <NewGroupModal>
               <Button size="lg" className="h-20 w-full max-w-sm rounded-2xl text-lg font-bold gap-4 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
                 <Sparkles className="w-6 h-6" />
-                Criar Meu Primeiro Perfil
+                {user?.isFirstAccess ? "Criar Minha Primeira Conta" : "Criar Nova Conta"}
               </Button>
             </NewGroupModal>
             <p className="mt-6 text-sm text-muted-foreground">

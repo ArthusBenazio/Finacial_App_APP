@@ -3,6 +3,7 @@ export interface User {
   name: string
   email: string
   avatarUrl: string | null
+  isFirstAccess: boolean
 }
 
 export interface Account {
