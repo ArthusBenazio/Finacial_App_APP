@@ -9,8 +9,8 @@ interface InviteCreatedResponse {
   invite: InviteCreated
 }
 
-export async function createInvite(email: string) {
-  const response = await http.post<InviteCreatedResponse>('/invites', { email })
+export async function createInvite(email: string, groupId: string) {
+  const response = await http.post<InviteCreatedResponse>('/invites', { email, groupId })
   return response.data.invite
 }
 

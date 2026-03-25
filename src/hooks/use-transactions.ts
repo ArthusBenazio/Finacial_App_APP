@@ -14,7 +14,7 @@ export interface Transaction {
     icon: string
     color: string
   } | null
-  occurredAt: string
+  date: string
   accountId: string
   destinationAccountId: string | null
   userId: string
@@ -27,6 +27,7 @@ export interface Transaction {
   recurringIndex: number | null
   recurringTotal: number | null
   recurringInterval: 'MONTHLY' | 'WEEKLY' | 'YEARLY' | null
+  isPrediction: boolean
 }
 
 export function useTransactions() {
@@ -46,11 +47,12 @@ interface CreateTransactionData {
   categoryId?: string
   accountId: string
   destinationAccountId?: string
-  occurredAt: string
+  date: string
   // recurring
   isRecurring?: boolean
   recurringCount?: number
   recurringInterval?: 'MONTHLY' | 'WEEKLY' | 'YEARLY'
+  isPrediction?: boolean
 }
 
 export function useCreateTransaction() {

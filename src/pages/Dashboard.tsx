@@ -21,6 +21,8 @@ import {
   TrendingDown,
   Repeat2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Wallet,
   Heart,
@@ -28,6 +30,7 @@ import {
   Meh,
   Smile,
   BarChart3,
+  Calendar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,7 +52,7 @@ import { useAccountsBalance } from "@/hooks/use-accounts";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useBudgets } from "@/hooks/use-budgets";
 import { useGroups } from "@/hooks/use-groups";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { format, subMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -94,16 +97,27 @@ function CustomTooltip({ active, payload, label }: any) {
 // ─── Dashboard principal ────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { data: accountsBalance } = useAccountsBalance();
+  const { data: accountsBalance, isLoading: isLoadingAccounts } = useAccountsBalance();
   const { data: transactions } = useTransactions();
   const { data: budgets } = useBudgets();
   const { data: groups } = useGroups();
+
+  // Se o perfil foi selecionado mas não há nenhuma carteira/conta criada, 
+  // leva o usuário para criar sua primeira carteira (requisito de 1° acesso).
+  if (!isLoadingAccounts && accountsBalance && accountsBalance.accounts.length === 0) {
+      return <Navigate to="/wallets" replace />
+  }
 
   // toggle: top 5 gastos ou receitas
   const [categoryMode, setCategoryMode] = useState<"EXPENSE" | "INCOME">("EXPENSE");
 
   // filtro de período do gráfico
   const [chartPeriod, setChartPeriod] = useState<3 | 6 | 12>(6);
+
+  // filtro de mês para Saúde Financeira / Receitas / Despesas
+  const currentDate = new Date();
+  const currentMonthStr = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}`;
+  const [selectedHealthMonth, setSelectedHealthMonth] = useState<string>(currentMonthStr);
 
   // select de carteiras (null = todas selecionadas)
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string> | null>(null);
@@ -154,19 +168,77 @@ export default function Dashboard() {
   }, [isAllSelected, activeIds, allAccounts]);
 
   const now = new Date();
-  // Usar UTC para evitar bug de timezone: datas gravadas em UTC no banco
-  // não devem ser convertidas para hora local (ex: 2026-03-01T00:00Z = 2026-02-28T21:00-0300)
-  const currentMonth = now.getUTCMonth();
-  const currentYear = now.getUTCFullYear();
 
-  // ── Transações do mês atual (comparando em UTC, igual à tela de Lançamentos) ──
+  // ── Meses disponíveis derivados das transações (para o filtro de saúde financeira) ──
+  const availableHealthMonths = useMemo(() => {
+    const months = new Set<string>([currentMonthStr]);
+    (transactions ?? []).forEach((t) => {
+      const d = new Date(t.date);
+      months.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    });
+    return Array.from(months).sort().reverse();
+  }, [transactions, currentMonthStr]);
+
+  const selectedHealthYear = parseInt(selectedHealthMonth.split('-')[0]);
+  const selectedHealthMonthNum = parseInt(selectedHealthMonth.split('-')[1]) - 1; // 0-indexed
+
+  // Label legível do mês selecionado
+  const selectedHealthMonthLabel = useMemo(() => {
+    const d = new Date(selectedHealthYear, selectedHealthMonthNum, 1);
+    const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(d);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }, [selectedHealthYear, selectedHealthMonthNum]);
+
+  // Navegar para mês anterior / próximo
+  function navigateHealthMonth(direction: -1 | 1) {
+    const idx = availableHealthMonths.indexOf(selectedHealthMonth);
+    const next = idx - direction; // lista está invertida (mais recente primeiro)
+    if (next >= 0 && next < availableHealthMonths.length) {
+      setSelectedHealthMonth(availableHealthMonths[next]);
+    }
+  }
+
+  // ── Transações do mês selecionado (comparando em UTC) ──
   const currentMonthTransactions = useMemo(
     () =>
       (transactions ?? []).filter((t) => {
-        const d = new Date(t.occurredAt);
-        return d.getUTCMonth() === currentMonth && d.getUTCFullYear() === currentYear;
+        const d = new Date(t.date);
+        return (
+          !t.isPrediction &&
+          d.getUTCMonth() === selectedHealthMonthNum &&
+          d.getUTCFullYear() === selectedHealthYear
+        );
       }),
-    [transactions, currentMonth, currentYear]
+    [transactions, selectedHealthMonthNum, selectedHealthYear]
+  );
+
+  const currentMonthPredictions = useMemo(
+    () =>
+      (transactions ?? []).filter((t) => {
+        const d = new Date(t.date);
+        return (
+          t.isPrediction &&
+          d.getUTCMonth() === selectedHealthMonthNum &&
+          d.getUTCFullYear() === selectedHealthYear
+        );
+      }),
+    [transactions, selectedHealthMonthNum, selectedHealthYear]
+  );
+
+  const provisionadoReceitas = useMemo(
+    () =>
+      currentMonthPredictions
+        .filter((t) => t.type === "INCOME")
+        .reduce((acc, t) => acc + t.amount, 0),
+    [currentMonthPredictions]
+  );
+
+  const provisionadoDespesas = useMemo(
+    () =>
+      currentMonthPredictions
+        .filter((t) => t.type === "EXPENSE")
+        .reduce((acc, t) => acc + t.amount, 0),
+    [currentMonthPredictions]
   );
 
   const receitas = useMemo(
@@ -207,8 +279,13 @@ export default function Dashboard() {
     return sorted.map((c) => ({ ...c, pct: grandTotal > 0 ? (c.total / grandTotal) * 100 : 0 }));
   }, [currentMonthTransactions, categoryMode]);
 
-  // ── Últimas 5 transações ──
-  const recentTransactions = useMemo(() => transactions?.slice(0, 5) ?? [], [transactions]);
+  // ── Últimas 5 transações do mês selecionado ──
+  const recentTransactions = useMemo(() =>
+    [...currentMonthTransactions]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5),
+    [currentMonthTransactions]
+  );
 
   // ── Gráfico de evolução (período dinâmico) — comparando em UTC ──
   const chartData = useMemo(() => {
@@ -218,7 +295,7 @@ export default function Dashboard() {
       const refYear = ref.getUTCFullYear();
       const refMonth = ref.getUTCMonth();
       const monthTxs = (transactions ?? []).filter((t) => {
-        const d = new Date(t.occurredAt);
+        const d = new Date(t.date);
         return d.getUTCFullYear() === refYear && d.getUTCMonth() === refMonth;
       });
       const rec = monthTxs.filter((t) => t.type === "INCOME").reduce((a, t) => a + t.amount, 0);
@@ -246,10 +323,10 @@ export default function Dashboard() {
     return (transactions ?? [])
       .filter((t) => {
         if (!t.isRecurring) return false;
-        const d = new Date(t.occurredAt);
+        const d = new Date(t.date);
         return d >= today && d <= limit;
       })
-      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 4);
   }, [transactions]);
 
@@ -262,7 +339,7 @@ export default function Dashboard() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* ── Linha 1: Cards de resumo ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Saldo Total */}
         <Card className="bg-primary text-primary-foreground border-none shadow-md overflow-hidden relative">
           <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
@@ -368,13 +445,16 @@ export default function Dashboard() {
         {/* Receitas */}
         <Card className="shadow-sm">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-muted-foreground text-sm font-medium">Receitas no mês</CardTitle>
+            <div>
+              <CardTitle className="text-muted-foreground text-sm font-medium">Receitas</CardTitle>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{selectedHealthMonthLabel}</p>
+            </div>
             <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-emerald-600">
               <PrivateValue value={formatBRL(receitas)} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -383,16 +463,20 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+
         {/* Despesas */}
         <Card className="shadow-sm">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-muted-foreground text-sm font-medium">Despesas no mês</CardTitle>
+            <div>
+              <CardTitle className="text-muted-foreground text-sm font-medium">Despesas</CardTitle>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{selectedHealthMonthLabel}</p>
+            </div>
             <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center">
               <ArrowDownRight className="w-4 h-4 text-rose-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-rose-600">
               <PrivateValue value={formatBRL(despesas)} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -403,9 +487,9 @@ export default function Dashboard() {
       </div>
 
       {/* ── Linha 2: Gráfico + Saúde Financeira ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
         {/* Gráfico de linha (período dinâmico) */}
-        <Card className="lg:col-span-2 shadow-sm border-border/50">
+        <Card className="lg:col-span-2 shadow-sm border-border/50 flex flex-col">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -435,8 +519,9 @@ export default function Dashboard() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+          <CardContent className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorReceitas" x1="0" y1="0" x2="0" y2="1">
@@ -485,16 +570,40 @@ export default function Dashboard() {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
         {/* Saúde Financeira */}
         <Card className={cn("shadow-sm border", healthInfo.bg, healthInfo.border)}>
           <CardHeader className="pb-3">
-            <CardTitle className={cn("text-sm font-semibold flex items-center gap-2", healthInfo.color)}>
-              <Heart className="w-4 h-4" />
-              Saúde Financeira
-            </CardTitle>
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className={cn("text-sm font-semibold flex items-center gap-2", healthInfo.color)}>
+                <Heart className="w-4 h-4" />
+                Saúde Financeira
+              </CardTitle>
+            </div>
+            {/* Navegador de mês */}
+            <div className="flex items-center justify-between mt-3 bg-background/60 rounded-xl px-2 py-1.5 border border-border/50">
+              <button
+                onClick={() => navigateHealthMonth(-1)}
+                disabled={availableHealthMonths.indexOf(selectedHealthMonth) >= availableHealthMonths.length - 1}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                <Calendar className="w-3 h-3 text-muted-foreground" />
+                <span>{selectedHealthMonthLabel}</span>
+              </div>
+              <button
+                onClick={() => navigateHealthMonth(1)}
+                disabled={availableHealthMonths.indexOf(selectedHealthMonth) <= 0}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4 pt-2">
             {/* Gauge circular */}
@@ -556,8 +665,8 @@ export default function Dashboard() {
         <Card className="lg:col-span-2 shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <div>
-              <CardTitle className="text-base">Últimos Lançamentos</CardTitle>
-              <CardDescription className="text-xs mt-1">Sua movimentação recente em todas as contas.</CardDescription>
+              <CardTitle className="text-base">Lançamentos do Mês</CardTitle>
+              <CardDescription className="text-xs mt-1">5 mais recentes de {selectedHealthMonthLabel}</CardDescription>
             </div>
             <Button variant="outline" size="sm" className="h-8 text-xs rounded-full" asChild>
               <Link to="/transactions">Ver todos</Link>
@@ -642,7 +751,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {getAccountName(t.accountId)} &bull;{" "}
-                        {new Intl.DateTimeFormat("pt-BR").format(new Date(t.occurredAt))}
+                        {new Intl.DateTimeFormat("pt-BR").format(new Date(t.date))}
                       </p>
                     </div>
                     <DropdownMenu>
@@ -675,7 +784,7 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-base">Top 5 Categorias</CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  {categoryMode === "EXPENSE" ? "Maiores gastos" : "Maiores receitas"} do mês
+                  {categoryMode === "EXPENSE" ? "Maiores gastos" : "Maiores receitas"} · {selectedHealthMonthLabel}
                 </CardDescription>
               </div>
               {/* Toggle */}
@@ -819,7 +928,7 @@ export default function Dashboard() {
                       <div>
                         <p className="text-xs font-semibold text-foreground leading-none">{t.description}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {new Intl.DateTimeFormat("pt-BR").format(new Date(t.occurredAt))}
+                          {new Intl.DateTimeFormat("pt-BR").format(new Date(t.date))}
                         </p>
                       </div>
                     </div>

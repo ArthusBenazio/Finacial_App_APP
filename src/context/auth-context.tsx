@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function signOut() {
     localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem('financial:selectedGroupId')
     setToken(null)
     setUser(null)
   }

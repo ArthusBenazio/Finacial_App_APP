@@ -19,7 +19,7 @@ export async function createTransaction(data: {
   amount: number
   type: TransactionType
   category: string
-  occurredAt: string
+  date: string
   accountId: string
 }) {
   const response = await http.post<TransactionResponse>('/transactions', data)

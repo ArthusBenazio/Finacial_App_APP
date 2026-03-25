@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Wallet, Tag, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { Wallet, Tag, Calendar as CalendarIcon, Loader2, CalendarPlus } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { useUpdateTransaction, Transaction } from "@/hooks/use-transactions"
 import { useAccountsBalance } from "@/hooks/use-accounts"
 import { useCategories } from "@/hooks/use-categories"
@@ -41,6 +42,7 @@ const formSchema = z.object({
   account: z.string().min(1, "Conta é obrigatória"),
   destinationAccount: z.string().optional(),
   date: z.string().min(1, "Data é obrigatória"),
+  isPrediction: z.boolean().default(false),
 }).refine((data) => {
   if (data.type !== 'TRANSFER' && !data.category) return false;
   return true;
@@ -68,7 +70,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
   const { data: categories } = useCategories()
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       description: transaction.description,
       amount: Math.abs(transaction.amount).toString(),
@@ -76,7 +78,8 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
       category: transaction.categoryId || "",
       account: transaction.accountId,
       destinationAccount: transaction.destinationAccountId || "",
-      date: new Date(transaction.occurredAt).toISOString().split('T')[0],
+      date: new Date(transaction.date).toISOString().split('T')[0],
+      isPrediction: transaction.isPrediction,
     },
   })
 
@@ -90,7 +93,8 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
         category: transaction.categoryId || "",
         account: transaction.accountId,
         destinationAccount: transaction.destinationAccountId || "",
-        date: new Date(transaction.occurredAt).toISOString().split('T')[0],
+        date: new Date(transaction.date).toISOString().split('T')[0],
+        isPrediction: transaction.isPrediction,
       })
     }
   }, [transaction, open, form])
@@ -107,7 +111,8 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
         categoryId: values.type !== 'TRANSFER' ? values.category : undefined,
         accountId: values.account,
         destinationAccountId: values.type === 'TRANSFER' ? values.destinationAccount : undefined,
-        occurredAt: new Date(values.date).toISOString()
+        date: new Date(values.date).toISOString(),
+        isPrediction: values.isPrediction,
       })
       onOpenChange(false)
     } catch (error) {
@@ -117,12 +122,12 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+      <DialogContent className="sm:max-w-[425px] rounded-2xl p-5">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Editar Lançamento</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-2">
             <FormField
               control={form.control}
               name="description"
@@ -130,7 +135,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                 <FormItem>
                   <FormLabel>O que foi?</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Mercado, Salário, Aluguel" {...field} className="h-11 bg-muted/30 border-none" />
+                    <Input placeholder="Ex: Mercado, Salário, Aluguel" {...field} className="h-10 bg-muted/30 border-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,7 +150,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                   <FormItem>
                     <FormLabel>Valor (R$)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0,00" {...field} className="h-11 bg-muted/30 border-none font-bold" />
+                      <Input type="number" step="0.01" placeholder="0,00" {...field} className="h-10 bg-muted/30 border-none font-bold" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -159,7 +164,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                     <FormLabel>Tipo</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 bg-muted/30 border-none">
+                        <SelectTrigger className="h-10 bg-muted/30 border-none">
                           <SelectValue placeholder="Tipo" />
                         </SelectTrigger>
                       </FormControl>
@@ -180,10 +185,10 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
               name="account"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{transactionType === 'TRANSFER' ? 'De qual conta?' : 'Qual conta?'}</FormLabel>
+                  <FormLabel>{transactionType === 'TRANSFER' ? 'Conta de Origem' : 'Conta'}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-11 bg-muted/30 border-none">
+                      <SelectTrigger className="h-10 bg-muted/30 border-none">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-4 h-4 text-muted-foreground" />
                           <SelectValue placeholder="Selecione a conta" />
@@ -201,38 +206,36 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
               )}
             />
 
-            {transactionType === 'TRANSFER' && (
-              <FormField
-                control={form.control}
-                name="destinationAccount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Para qual conta?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 bg-muted/30 border-none">
-                          <div className="flex items-center gap-2">
-                            <Wallet className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Selecione a conta de destino" />
-                          </div>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accountsBalance?.accounts
-                          .filter(acc => acc.id !== form.watch("account"))
-                          .map(acc => (
-                            <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
             <div className="grid grid-cols-2 gap-4">
-              {transactionType !== 'TRANSFER' ? (
+              {transactionType === 'TRANSFER' ? (
+                <FormField
+                  control={form.control}
+                  name="destinationAccount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Para</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-muted/30 border-none">
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4 text-muted-foreground" />
+                              <SelectValue placeholder="Destino" />
+                            </div>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accountsBalance?.accounts
+                            .filter(acc => acc.id !== form.watch("account"))
+                            .map(acc => (
+                              <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
                 <FormField
                   control={form.control}
                   name="category"
@@ -241,10 +244,10 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                       <FormLabel>Categoria</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-11 bg-muted/30 border-none">
+                          <SelectTrigger className="h-10 bg-muted/30 border-none">
                             <div className="flex items-center gap-2">
                               <Tag className="w-4 h-4 text-muted-foreground" />
-                              <SelectValue placeholder="Categoria" />
+                              <SelectValue placeholder="Selecione" />
                             </div>
                           </SelectTrigger>
                         </FormControl>
@@ -281,9 +284,8 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                     </FormItem>
                   )}
                 />
-              ) : (
-                <div />
               )}
+
               <FormField
                 control={form.control}
                 name="date"
@@ -293,7 +295,7 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                     <FormControl>
                       <div className="relative">
                         <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input type="date" {...field} className="h-11 bg-muted/30 border-none pl-10" />
+                        <Input type="date" {...field} className="h-10 bg-muted/30 border-none pl-11" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -301,9 +303,47 @@ export function EditTransactionModal({ transaction, open, onOpenChange }: EditTr
                 )}
               />
             </div>
+            {/* ── PREDICTION TOGGLE ─────────────────────────────────────────── */}
+            <FormField
+              control={form.control}
+              name="isPrediction"
+              render={({ field }) => (
+                <FormItem>
+                  <div
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
+                        field.value
+                        ? "bg-indigo-500/10 border-indigo-500/30"
+                        : "bg-muted/30 border-transparent"
+                    }`}
+                    onClick={() => field.onChange(!field.value)}
+                  >
+                    <CalendarPlus
+                      className={`w-4 h-4 transition-colors ${
+                        field.value ? "text-indigo-600" : "text-muted-foreground"
+                      }`}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Lançar como Previsão</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        {field.value 
+                          ? "Não afeta o saldo real até você confirmar no dia." 
+                          : "Lançamento confirmado que afeta seu saldo real."}
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-            <DialogFooter className="pt-4">
-              <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
+            <DialogFooter className="pt-2">
+              <Button type="submit" disabled={isPending} className="w-full h-11 text-base font-bold rounded-xl shadow-lg shadow-primary/20">
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Atualizar Lançamento
               </Button>

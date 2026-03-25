@@ -8,9 +8,14 @@ export const http = axios.create({
 
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem('financial:token')
+  const groupId = localStorage.getItem('financial:selectedGroupId')
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+
+  if (groupId) {
+    config.headers['x-group-id'] = groupId
   }
 
   return config

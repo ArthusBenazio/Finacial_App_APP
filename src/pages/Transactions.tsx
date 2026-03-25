@@ -14,7 +14,8 @@ import {
   Download,
   MoreVertical,
   Clock,
-  RefreshCw
+  RefreshCw,
+  CalendarClock
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,73 +68,82 @@ export default function Transactions() {
   const availableMonths = Array.from(new Set([
     currentMonthStr,
     ...(transactions?.map(t => {
-      const d = new Date(t.occurredAt);
-      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const d = new Date(t.date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }) || [])
   ])).sort().reverse();
 
   // Calcular saldos ao longo do tempo (saldos após cada transação, incluindo futuras)
   const transactionBalances = new Map<string, { source: number, dest?: number, global: number, projected: boolean }>();
   
-  if (transactions && accounts) {
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
+  if (transactions && accounts && accountsBalance) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // accounts.balance JÁ inclui TODAS as transações (passadas e futuras).
-    // Para chegar no saldo ANTES de qualquer transação, desfazemos TODAS elas.
-    const initialBalances: Record<string, number> = {};
+    // Get strictly confirmed "real-world" balances for each account from the backend
+    const currentRealBalances: Record<string, number> = {};
     accounts.forEach(acc => {
-      let totalDelta = 0;
-      transactions.forEach(t => {
-        const amount = Math.abs(Number(t.amount));
-        if (t.accountId === acc.id) {
-          if (t.type === 'INCOME') totalDelta += amount;
-          if (t.type === 'EXPENSE') totalDelta -= amount;
-          if (t.type === 'TRANSFER') totalDelta -= amount;
-        }
-        if (t.destinationAccountId === acc.id && t.type === 'TRANSFER') {
-          totalDelta += amount;
-        }
+      const pastAlignedAcc = accountsBalance.accounts.find(a => a.id === acc.id);
+      currentRealBalances[acc.id] = pastAlignedAcc ? pastAlignedAcc.balance : Number(acc.balance);
+    });
+    console.log('DEBUG BALANCES:', currentRealBalances);
+
+    // We also need "Projetado" balances which include everything
+    const currentProjectedBalances: Record<string, number> = {};
+    accounts.forEach(acc => {
+      // Standard DB balance already includes everything
+      currentProjectedBalances[acc.id] = Number(acc.balance);
+    });
+    console.log('STARTING GLOBAL:', Object.values(currentRealBalances).reduce((a,b)=>a+b,0));
+
+    // To calculate the balance at EACH row, we walk BACKWARDS from the current balances.
+    // Row balance = Balance after this transaction happened.
+    const chronoSortedDesc = [...transactions].sort((a, b) => {
+      const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const runningReal = { ...currentRealBalances };
+    const runningProjected = { ...currentProjectedBalances };
+
+    chronoSortedDesc.forEach(t => {
+      const txDate = new Date(t.date);
+      txDate.setHours(0, 0, 0, 0);
+      const isFuture = txDate > today;
+      const isPrediction = t.isPrediction;
+      const isProjected = isPrediction || isFuture;
+
+      // The balance FOR THIS ROW is the CURRENT running balance.
+      transactionBalances.set(t.id, {
+        source: isProjected ? runningProjected[t.accountId] : runningReal[t.accountId],
+        dest: t.destinationAccountId 
+          ? (isProjected ? runningProjected[t.destinationAccountId] : runningReal[t.destinationAccountId]) 
+          : undefined,
+        global: Object.values(isProjected ? runningProjected : runningReal).reduce((a, b) => a + b, 0),
+        projected: isProjected
       });
-      // saldo antes de qualquer transação
-      initialBalances[acc.id] = acc.balance - totalDelta;
-    });
 
-    const currentBalances = { ...initialBalances };
-    
-    // Ordenar do mais antigo pro mais novo para calcular correntamente
-    const sortedTransactions = [...transactions].sort((a, b) => {
-      const diff = new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
-      if (diff !== 0) return diff;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
-    sortedTransactions.forEach(t => {
-      const transactionDate = new Date(t.occurredAt);
-      const isFuture = transactionDate > now;
-
-      const amount = Math.abs(Number(t.amount));
+      // Now "un-apply" this transaction to move backwards to the balance BEFORE it happened.
+      const val = Math.abs(Number(t.amount));
       if (t.type === 'INCOME') {
-        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) + amount;
+        runningProjected[t.accountId] -= val;
+        if (!isProjected) runningReal[t.accountId] -= val;
       } else if (t.type === 'EXPENSE') {
-        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) - amount;
+        runningProjected[t.accountId] += val;
+        if (!isProjected) runningReal[t.accountId] += val;
       } else if (t.type === 'TRANSFER') {
-        currentBalances[t.accountId] = (currentBalances[t.accountId] || 0) - amount;
+        runningProjected[t.accountId] += val;
+        if (!isProjected) runningReal[t.accountId] += val;
         if (t.destinationAccountId) {
-          currentBalances[t.destinationAccountId] = (currentBalances[t.destinationAccountId] || 0) + amount;
+          runningProjected[t.destinationAccountId] -= val;
+          if (!isProjected) runningReal[t.destinationAccountId] -= val;
         }
       }
-
-      const globalBalance = Object.values(currentBalances).reduce((sum, val) => sum + val, 0);
-
-      transactionBalances.set(t.id, { 
-        source: currentBalances[t.accountId], 
-        dest: t.destinationAccountId ? currentBalances[t.destinationAccountId] : undefined,
-        global: globalBalance,
-        projected: isFuture
-      });
     });
   }
+
+
 
   const getTransactionBalance = (t: Transaction, selectedAccId: string) => {
     const balances = transactionBalances.get(t.id);
@@ -151,8 +161,8 @@ export default function Transactions() {
   };
 
   const filteredTransactions = (transactions?.filter(t => {
-    const transactionDate = new Date(t.occurredAt);
-    const transactionMonth = `${transactionDate.getUTCFullYear()}-${String(transactionDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    const transactionDate = new Date(t.date);
+    const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
     
     const matchesSearch = 
       t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -166,7 +176,7 @@ export default function Transactions() {
     return matchesSearch && matchesMonth && matchesAccount;
   }) || []).sort((a, b) => {
     // Mesmo critério de ordenação usado no cálculo dos saldos (mais novo primeiro para exibição)
-    const diff = new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime();
+    const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
     if (diff !== 0) return diff;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
@@ -182,7 +192,7 @@ export default function Transactions() {
         `"${t.description.replace(/"/g, '""')}"`,
         `"${t.category || ''}"`,
         `"${getAccountName(t.accountId)}"`,
-        new Date(t.occurredAt).toISOString().split('T')[0],
+        new Date(t.date).toISOString().split('T')[0],
         t.amount,
         getTransactionBalance(t, selectedAccountId) || 0
       ].join(','))
@@ -215,6 +225,20 @@ export default function Transactions() {
               <Plus className="w-4 h-4" /> Novo Lançamento
             </Button>
           </NewTransactionModal>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-xs font-mono mb-4">
+        <h4 className="font-bold mb-2">DEBUG PANEL</h4>
+        <div>Accounts Loaded: {accounts?.length}</div>
+        <div>Transactions Loaded: {transactions?.length}</div>
+        <div className="mt-2 text-amber-800">
+           {accounts && accountsBalance?.accounts.map(a => (
+             <div key={a.id}>{a.name}: {a.balance.toFixed(2)} (DB: {accounts.find(x => x.id === a.id)?.balance.toFixed(2)})</div>
+           ))}
+        </div>
+        <div className="mt-2 font-bold bordert-t border-amber-200 pt-2">
+           Global Real Sum: {accountsBalance?.accounts.reduce((sum, a) => sum + a.balance, 0).toFixed(2)}
         </div>
       </div>
 
@@ -295,7 +319,8 @@ export default function Transactions() {
                         t.type === 'EXPENSE' ? "bg-rose-50 text-rose-600" :
                         "bg-blue-50 text-blue-600"
                       )}>
-                        {t.type === 'INCOME' ? <ArrowUpRight className="w-3.5 h-3.5" /> :
+                        {t.isPrediction ? <CalendarClock className="w-3.5 h-3.5" /> :
+                         t.type === 'INCOME' ? <ArrowUpRight className="w-3.5 h-3.5" /> :
                          t.type === 'EXPENSE' ? <ArrowDownRight className="w-3.5 h-3.5" /> :
                          <ArrowLeftRight className="w-3.5 h-3.5" />}
                       </div>
@@ -308,6 +333,12 @@ export default function Transactions() {
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-50 text-violet-600 border border-violet-200">
                               <RefreshCw className="w-2.5 h-2.5" />
                               {t.recurringIndex}/{t.recurringTotal}
+                            </span>
+                          )}
+                          {t.isPrediction && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                              <CalendarClock className="w-2.5 h-2.5" />
+                              Previsão
                             </span>
                           )}
                         </div>
@@ -343,7 +374,7 @@ export default function Transactions() {
                       )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
-                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(t.occurredAt))}
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(t.date))}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className={cn(
@@ -355,6 +386,7 @@ export default function Transactions() {
                           (t.type === 'EXPENSE' ? "-" : t.type === 'INCOME' ? "+" : "") + 
                           Math.abs(t.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         } />
+                        {t.isPrediction && <span className="text-[10px] block opacity-70 font-normal">Previsto</span>}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-right whitespace-nowrap">
@@ -368,8 +400,18 @@ export default function Transactions() {
                               ? bal.value >= 0 ? "text-emerald-500/60" : "text-rose-500/60"
                               : bal.value >= 0 ? "text-emerald-600/80" : "text-rose-600/80"
                           )}>
-                            {bal.projected && <Clock className="w-3 h-3 opacity-60" />}
-                            <PrivateValue value={bal.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+                            {bal.projected && (
+                              <div className="flex flex-col items-end">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 opacity-60" />
+                                  <PrivateValue value={bal.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+                                </span>
+                                <span className="text-[9px] opacity-60 font-medium">Projetado</span>
+                              </div>
+                            )}
+                            {!bal.projected && (
+                              <PrivateValue value={bal.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+                            )}
                           </span>
                         );
                       })()}

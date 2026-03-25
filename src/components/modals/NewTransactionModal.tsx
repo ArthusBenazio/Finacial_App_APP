@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Wallet, Tag, Calendar as CalendarIcon, Loader2, RefreshCw } from "lucide-react"
+import { Plus, Wallet, Tag, Calendar as CalendarIcon, Loader2, RefreshCw, CalendarPlus } from "lucide-react"
 import { useCreateTransaction } from "@/hooks/use-transactions"
 import { useAccountsBalance } from "@/hooks/use-accounts"
 import { useCategories } from "@/hooks/use-categories"
@@ -80,6 +80,7 @@ const formSchema = z
     isRecurring: z.boolean().default(false),
     recurringCount: z.string().optional(),
     recurringInterval: z.enum(["MONTHLY", "WEEKLY", "YEARLY"]).default("MONTHLY"),
+    isPrediction: z.boolean().default(false),
   })
   .refine(
     (data) => {
@@ -117,6 +118,7 @@ type FormValues = {
   isRecurring: boolean
   recurringCount?: string
   recurringInterval: "MONTHLY" | "WEEKLY" | "YEARLY"
+  isPrediction: boolean
 }
 
 export function NewTransactionModal({ children }: { children?: React.ReactNode }) {
@@ -139,6 +141,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
       isRecurring: false,
       recurringCount: "",
       recurringInterval: "MONTHLY",
+      isPrediction: false,
     },
   })
 
@@ -148,6 +151,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
   const recurringInterval = form.watch("recurringInterval")
   const amount = form.watch("amount")
   const date = form.watch("date")
+  const isPrediction = form.watch("isPrediction")
 
   const recurringPreview = React.useMemo(
     () =>
@@ -172,12 +176,13 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
         accountId: values.account,
         destinationAccountId:
           values.type === "TRANSFER" ? values.destinationAccount : undefined,
-        occurredAt: new Date(values.date).toISOString(),
+        date: new Date(values.date).toISOString(),
         isRecurring: values.isRecurring,
         recurringCount: values.isRecurring
           ? parseInt(values.recurringCount ?? "1")
           : undefined,
         recurringInterval: values.isRecurring ? values.recurringInterval : undefined,
+        isPrediction: values.isPrediction,
       })
       setOpen(false)
       form.reset()
@@ -196,12 +201,12 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[440px] rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[440px] rounded-2xl max-h-[95vh] overflow-y-auto p-5">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Novo Lançamento</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 pt-2">
             {/* Title */}
             <FormField
               control={form.control}
@@ -213,7 +218,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                     <Input
                       placeholder="Ex: Mercado, Salário, Faculdade"
                       {...field}
-                      className="h-11 bg-muted/30 border-none"
+                      className="h-10 bg-muted/30 border-none"
                     />
                   </FormControl>
                   <FormMessage />
@@ -235,7 +240,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                         step="0.01"
                         placeholder="0,00"
                         {...field}
-                        className="h-11 bg-muted/30 border-none font-bold"
+                        className="h-10 bg-muted/30 border-none font-bold"
                       />
                     </FormControl>
                     <FormMessage />
@@ -250,7 +255,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                     <FormLabel>Tipo</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 bg-muted/30 border-none">
+                        <SelectTrigger className="h-10 bg-muted/30 border-none">
                           <SelectValue placeholder="Tipo" />
                         </SelectTrigger>
                       </FormControl>
@@ -266,18 +271,18 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               />
             </div>
 
-            {/* Account */}
+            {/* Account Row */}
             <FormField
               control={form.control}
               name="account"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {transactionType === "TRANSFER" ? "De qual conta?" : "Qual conta?"}
+                    {transactionType === "TRANSFER" ? "Conta de Origem" : "Conta"}
                   </FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-11 bg-muted/30 border-none">
+                      <SelectTrigger className="h-10 bg-muted/30 border-none">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-4 h-4 text-muted-foreground" />
                           <SelectValue placeholder="Selecione a conta" />
@@ -297,40 +302,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               )}
             />
 
-            {/* Destination account (TRANSFER) */}
-            {transactionType === "TRANSFER" && (
-              <FormField
-                control={form.control}
-                name="destinationAccount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Para qual conta?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 bg-muted/30 border-none">
-                          <div className="flex items-center gap-2">
-                            <Wallet className="w-4 h-4 text-muted-foreground" />
-                            <SelectValue placeholder="Selecione a conta de destino" />
-                          </div>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accountsBalance?.accounts
-                          .filter((acc) => acc.id !== form.watch("account"))
-                          .map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id}>
-                              {acc.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Category + Date */}
+            {/* Category/Dest + Date Grid */}
             <div className="grid grid-cols-2 gap-4">
               {transactionType !== "TRANSFER" ? (
                 <FormField
@@ -341,10 +313,10 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                       <FormLabel>Categoria</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-11 bg-muted/30 border-none">
+                          <SelectTrigger className="h-10 bg-muted/30 border-none">
                             <div className="flex items-center gap-2">
                               <Tag className="w-4 h-4 text-muted-foreground" />
-                              <SelectValue placeholder="Categoria" />
+                              <SelectValue placeholder="Selecione" />
                             </div>
                           </SelectTrigger>
                         </FormControl>
@@ -387,7 +359,35 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                   )}
                 />
               ) : (
-                <div />
+                <FormField
+                  control={form.control}
+                  name="destinationAccount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Para</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-muted/30 border-none">
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4 text-muted-foreground" />
+                              <SelectValue placeholder="Destino" />
+                            </div>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accountsBalance?.accounts
+                            .filter((acc) => acc.id !== form.watch("account"))
+                            .map((acc) => (
+                              <SelectItem key={acc.id} value={acc.id}>
+                                {acc.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
 
               <FormField
@@ -402,7 +402,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                         <Input
                           type="date"
                           {...field}
-                          className="h-11 bg-muted/30 border-none pl-10"
+                          className="h-10 bg-muted/30 border-none pl-11"
                         />
                       </div>
                     </FormControl>
@@ -412,6 +412,45 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               />
             </div>
 
+            {/* ── PREDICTION TOGGLE ─────────────────────────────────────────── */}
+            <FormField
+              control={form.control}
+              name="isPrediction"
+              render={({ field }) => (
+                <FormItem>
+                  <div
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
+                      field.value
+                        ? "bg-indigo-500/10 border-indigo-500/30"
+                        : "bg-muted/30 border-transparent"
+                    }`}
+                    onClick={() => field.onChange(!field.value)}
+                  >
+                    <CalendarPlus
+                      className={`w-4 h-4 transition-colors ${
+                        field.value ? "text-indigo-600" : "text-muted-foreground"
+                      }`}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Lançar como Previsão</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        {field.value 
+                          ? "Não afeta o saldo real até você confirmar no dia." 
+                          : "Lançamento confirmado que afeta seu saldo real."}
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
+
             {/* ── RECURRING TOGGLE ─────────────────────────────────────────── */}
             <FormField
               control={form.control}
@@ -419,7 +458,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               render={({ field }) => (
                 <FormItem>
                   <div
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer select-none ${
                       field.value
                         ? "bg-primary/8 border-primary/30"
                         : "bg-muted/30 border-transparent"
@@ -469,7 +508,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                               max={360}
                               placeholder="Ex: 12"
                               {...field}
-                              className="h-11 bg-muted/30 border-none font-bold pr-14"
+                              className="h-10 bg-muted/30 border-none font-bold pr-14"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                               {recurringInterval ? INTERVAL_LABELS[recurringInterval] : "vezes"}
@@ -489,7 +528,7 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                         <FormLabel>Frequência</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11 bg-muted/30 border-none">
+                            <SelectTrigger className="h-10 bg-muted/30 border-none">
                               <SelectValue placeholder="Intervalo" />
                             </SelectTrigger>
                           </FormControl>
@@ -515,11 +554,11 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
               </div>
             )}
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-2">
               <Button
                 type="submit"
                 disabled={isPending}
-                className="w-full h-12 text-base font-bold rounded-xl shadow-lg shadow-primary/20"
+                className="w-full h-11 text-base font-bold rounded-xl shadow-lg shadow-primary/20"
               >
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isRecurring

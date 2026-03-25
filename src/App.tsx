@@ -3,7 +3,6 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import { AuthGuard } from './components/auth-guard'
 import { useAuth } from './context/auth-context'
 import { AuthCallbackPage } from './pages/auth-callback-page'
-import { InvitePage } from './pages/invite-page'
 import { LoginPage } from './pages/login-page'
 import { RegisterPage } from './pages/register-page'
 import Dashboard from './pages/Dashboard'
@@ -14,11 +13,14 @@ import Groups from './pages/Groups'
 import Settings from './pages/Settings'
 import NotFound from './pages/not-found'
 
+import { InvitePage } from './pages/InvitePage'
+import { SelectGroupPage } from './pages/SelectGroupPage'
+
 function PublicOnlyRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth()
 
   if (token) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/select-group" replace />
   }
 
   return children
@@ -29,7 +31,16 @@ export function App() {
     <Routes>
       <Route
         path="/"
-        element={<Navigate to="/dashboard" replace />}
+        element={<Navigate to="/select-group" replace />}
+      />
+
+      <Route
+        path="/select-group"
+        element={
+          <AuthGuard>
+            <SelectGroupPage />
+          </AuthGuard>
+        }
       />
 
       <Route
@@ -51,6 +62,7 @@ export function App() {
       />
 
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/invite/:token" element={<InvitePage />} />
 
       <Route
         path="/dashboard"

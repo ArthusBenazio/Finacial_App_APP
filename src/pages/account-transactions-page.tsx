@@ -21,7 +21,7 @@ export function AccountTransactionsPage() {
   const [amount, setAmount] = useState('0')
   const [type, setType] = useState<TransactionType>('EXPENSE')
   const [category, setCategory] = useState('')
-  const [occurredAt, setOccurredAt] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setOccurredAt] = useState(new Date().toISOString().slice(0, 10))
   const [isCreating, setIsCreating] = useState(false)
 
   async function loadData() {
@@ -66,7 +66,7 @@ export function AccountTransactionsPage() {
         amount: Number(amount),
         type,
         category,
-        occurredAt: new Date(occurredAt).toISOString(),
+        date: new Date(date).toISOString(),
         accountId,
       })
 
@@ -206,12 +206,12 @@ export function AccountTransactionsPage() {
                 </div>
 
                 <div className="space-y-2.5">
-                  <Label htmlFor="occurredAt" className="text-sm font-semibold text-foreground/80">Date</Label>
+                  <Label htmlFor="date" className="text-sm font-semibold text-foreground/80">Date</Label>
                   <Input
-                    id="occurredAt"
+                    id="date"
                     required
                     type="date"
-                    value={occurredAt}
+                    value={date}
                     onChange={(event) => setOccurredAt(event.target.value)}
                     className="bg-white focus-visible:ring-[#0b6e6f]"
                   />
@@ -259,7 +259,7 @@ export function AccountTransactionsPage() {
                           {transaction.category ?? 'No category'}
                         </span>
                         <span className="text-muted-foreground/50">•</span>
-                        <span>{new Date(transaction.occurredAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                        <span>{new Date(transaction.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                       </p>
                     </div>
 

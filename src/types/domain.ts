@@ -33,9 +33,10 @@ export interface Transaction {
   amount: number
   type: TransactionType
   category: string | null
-  occurredAt: string
+  date: string
   accountId: string
   userId: string
+  groupId: string | null
   createdAt: string
 }
 
@@ -44,6 +45,7 @@ export interface Invite {
   email: string
   token: string
   senderId: string
+  groupId: string | null
   receiverId: string | null
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
   createdAt: string
@@ -55,5 +57,6 @@ export interface InviteCreated {
   email: string
   token: string
   senderId: string
+  groupId: string | null
   expiresAt: string
 }
