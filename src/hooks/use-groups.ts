@@ -55,3 +55,19 @@ export function useCreateGroup() {
     },
   })
 }
+export function useDeleteGroup() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      await http.delete(`/groups/${groupId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+      toast.success('Perfil excluído com sucesso!')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao excluir perfil.')
+    },
+  })
+}

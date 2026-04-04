@@ -18,7 +18,7 @@ export function LoginPage() {
     try {
       await signIn(email, password)
       const redirectTo = searchParams.get('redirect')
-      const nextRoute = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard'
+      const nextRoute = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/select-group'
       navigate(nextRoute)
     } catch {
       setError('Invalid credentials. Please check your email and password.')

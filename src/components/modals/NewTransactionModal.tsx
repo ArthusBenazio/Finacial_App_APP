@@ -33,6 +33,7 @@ import { useCreateTransaction } from "@/hooks/use-transactions"
 import { useAccountsBalance } from "@/hooks/use-accounts"
 import { useCategories } from "@/hooks/use-categories"
 import { NewCategoryModal } from "./NewCategoryModal"
+import { NewAccountModal } from "./NewAccountModal"
 
 const INTERVAL_LABELS = {
   MONTHLY: "meses",
@@ -124,6 +125,7 @@ type FormValues = {
 export function NewTransactionModal({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
   const [newCatOpen, setNewCatOpen] = React.useState(false)
+  const [newAccOpen, setNewAccOpen] = React.useState(false)
   const { mutateAsync: createTransaction, isPending } = useCreateTransaction()
   const { data: accountsBalance } = useAccountsBalance()
   const { data: categories } = useCategories()
@@ -295,6 +297,21 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                           {acc.name}
                         </SelectItem>
                       ))}
+                      <div className="p-1 mt-1 border-t border-border/50">
+                        <NewAccountModal open={newAccOpen} onOpenChange={setNewAccOpen}>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-xs h-8 gap-2 bg-primary/5 text-primary hover:bg-primary/10"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setNewAccOpen(true)
+                            }}
+                          >
+                            <Plus className="w-3 h-3" /> Criar Conta
+                          </Button>
+                        </NewAccountModal>
+                      </div>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -382,6 +399,21 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                                 {acc.name}
                               </SelectItem>
                             ))}
+                          <div className="p-1 mt-1 border-t border-border/50">
+                            <NewAccountModal open={newAccOpen} onOpenChange={setNewAccOpen}>
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start text-xs h-8 gap-2 bg-primary/5 text-primary hover:bg-primary/10"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setNewAccOpen(true)
+                                }}
+                              >
+                                <Plus className="w-3 h-3" /> Criar Conta
+                              </Button>
+                            </NewAccountModal>
+                          </div>
                         </SelectContent>
                       </Select>
                       <FormMessage />

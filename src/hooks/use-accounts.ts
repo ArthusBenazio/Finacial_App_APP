@@ -20,8 +20,9 @@ export interface AccountsBalanceResponse {
 }
 
 export function useAccounts() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['accounts'],
+    queryKey: ['accounts', groupId],
     queryFn: async () => {
       const response = await http.get<{ accounts: Account[] }>('/accounts')
       return response.data.accounts
@@ -30,8 +31,9 @@ export function useAccounts() {
 }
 
 export function useAccountsBalance() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['accounts', 'balance'],
+    queryKey: ['accounts', 'balance', groupId],
     queryFn: async () => {
       const response = await http.get<AccountsBalanceResponse>('/accounts/balance')
       return response.data

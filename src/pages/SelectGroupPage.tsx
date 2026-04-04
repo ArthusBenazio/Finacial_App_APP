@@ -1,31 +1,61 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { useGroups } from "@/hooks/use-groups";
-import { Briefcase, Home, Plus, Users, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { useGroups, useDeleteGroup } from "@/hooks/use-groups";
+import { Briefcase, Home, Plus, Users, ArrowRight, Loader2, Sparkles, MoreVertical, Trash2, Share2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NewGroupModal } from "@/components/modals/NewGroupModal";
+import { ShareGroupModal } from "@/components/modals/ShareGroupModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function SelectGroupPage() {
-  const { user, signOut } = useAuth();
-  const { data: groups, isLoading } = useGroups();
+  const { user, signOut, isLoading: isLoadingAuth } = useAuth();
+  const { data: groups, isLoading: isLoadingGroups } = useGroups();
+  const { mutateAsync: deleteGroup, isPending: isDeleting } = useDeleteGroup();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [groupToDelete, setGroupToDelete] = useState<{ id: string, name: string } | null>(null);
+  const [groupToShare, setGroupToShare] = useState<{ id: string, name: string } | null>(null);
 
   const handleSelect = (groupId: string) => {
     localStorage.setItem('financial:selectedGroupId', groupId);
     navigate('/dashboard');
   };
 
-  // O usuário solicitou que SEMPRE caia nesta tela, mesmo tendo apenas 1 grupo.
-  // Removido useEffect que fazia auto-redirecionamento.
+  const handleDelete = async () => {
+    if (!groupToDelete) return;
+    try {
+      await deleteGroup(groupToDelete.id);
+      setGroupToDelete(null);
+    } catch {
+      // Error handled in hook
+    }
+  };
 
-  if (isLoading) {
+  const isLoadingInitial = isLoadingAuth || (isLoadingGroups && !groups);
+
+  if (isLoadingInitial) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary/30" />
       </div>
     );
   }
@@ -54,19 +84,62 @@ export function SelectGroupPage() {
               <Card 
                 key={group.id} 
                 className={cn(
-                  "group cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:shadow-md border-border/50",
+                  "group relative cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 hover:shadow-md border-border/50 overflow-hidden",
                   selectedId === group.id && "ring-2 ring-primary"
                 )}
                 onClick={() => handleSelect(group.id)}
               >
+                <div className="absolute top-2 right-2 z-10">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                }}
+                            >
+                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent 
+                            align="end" 
+                            className="w-48 shadow-xl border-border/50"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <DropdownMenuItem 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGroupToShare({ id: group.id, name: group.name });
+                                }}
+                                className="gap-2 cursor-pointer font-medium"
+                            >
+                                <Share2 className="w-4 h-4 text-sky-500" /> Compartilhar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator onClick={(e) => e.stopPropagation()} />
+                            <DropdownMenuItem 
+                                className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGroupToDelete({ id: group.id, name: group.name });
+                                }}
+                            >
+                                <Trash2 className="w-4 h-4" /> Excluir Conta
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
                 <CardHeader className="flex flex-row items-center gap-4 pb-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                     {group.name.toLowerCase().includes('pessoal') ? <Home className="w-6 h-6" /> : 
                      group.name.toLowerCase().includes('trabalho') ? <Briefcase className="w-6 h-6" /> :
                      <Users className="w-6 h-6" />}
                   </div>
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{group.name}</CardTitle>
+                  <div className="space-y-1 pr-8">
+                    <CardTitle className="text-lg truncate">{group.name}</CardTitle>
                     <CardDescription className="line-clamp-1">{group.description || 'Conta compartilhada'}</CardDescription>
                   </div>
                 </CardHeader>
@@ -107,6 +180,39 @@ export function SelectGroupPage() {
             </Button>
         </div>
       </div>
+
+      <ShareGroupModal 
+        open={!!groupToShare} 
+        onOpenChange={(open) => !open && setGroupToShare(null)}
+        groupId={groupToShare?.id || ""} 
+        groupName={groupToShare?.name || ""} 
+      />
+
+      <AlertDialog open={!!groupToDelete} onOpenChange={(open) => !open && setGroupToDelete(null)}>
+        <AlertDialogContent className="border-destructive/20 shadow-2xl">
+          <AlertDialogHeader>
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold">Excluir conta "{groupToDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-foreground/70">
+              Esta ação é <strong className="text-foreground font-bold">irreversível</strong>. Todos os dados financeiros, 
+              transações, orçamentos e contas bancárias associadas a este perfil serão 
+              <strong className="text-destructive font-bold"> permanentemente excluídos</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+            <AlertDialogCancel className="font-medium text-muted-foreground h-11">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-destructive hover:bg-destructive/90 text-white font-bold h-11 px-8 shadow-lg shadow-destructive/20"
+                disabled={isDeleting}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir Definitivamente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

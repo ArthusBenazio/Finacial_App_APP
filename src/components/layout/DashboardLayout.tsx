@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, ReactNode } from "react";
 import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,8 @@ import {
   CalendarClock,
   Trash2,
   Check,
-  Plus
+  Plus,
+  Loader2
 } from "lucide-react";
 import { useTransactions, useUpdateTransaction, useDeleteTransaction, Transaction } from "@/hooks/use-transactions";
 import {
@@ -43,7 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: ArrowLeftRight, label: "Lançamentos", path: "/transactions" },
   { icon: Wallet, label: "Carteiras", path: "/wallets" },
   { icon: PieChart, label: "Orçamentos", path: "/budgets" },
@@ -51,23 +52,27 @@ const navItems = [
   { icon: Settings, label: "Configurações", path: "/settings" },
 ];
 
-function getInitials(name: string) {
-  return name
+function getInitials(name: string | undefined | null) {
+  if (!name) return "??";
+  const initials = name
+    .trim()
     .split(" ")
+    .filter(Boolean)
     .slice(0, 2)
-    .map((n) => n[0])
+    .map((n) => n.charAt(0))
     .join("")
     .toUpperCase();
+  return initials || "??";
 }
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation().pathname;
   const navigate = useNavigate();
   const { isPrivate, togglePrivateMode } = usePrivateMode();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { data: transactions } = useTransactions();
-  const { data: groups, isLoading: isLoadingGroups } = useGroups();
+  const { data: groups, isLoading: isLoadingGroups, isError: isGroupsError } = useGroups();
   const { mutate: updateTransaction } = useUpdateTransaction();
   const { mutate: deleteTransaction } = useDeleteTransaction();
   const { signOut } = useAuth();
@@ -75,11 +80,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const selectedGroupId = localStorage.getItem('financial:selectedGroupId');
   const currentGroup = groups?.find(g => g.id === selectedGroupId);
 
-  // Se não estiver carregando E (não houver ID ou o ID selecionado não existir no banco), redireciona
-  if (!isLoadingGroups && (!selectedGroupId || !currentGroup) && location !== '/select-group') {
-    localStorage.removeItem('financial:selectedGroupId');
-    return <Navigate to="/select-group" replace />
-  }
+  // Redirecionamento movido para useEffect para maior estabilidade
+  useEffect(() => {
+    // Só redireciona se terminou de carregar (ou deu erro) e o grupo realmente não está lá
+    const finishedLoading = !isLoadingGroups && !isLoadingProfile;
+    const groupNotFound = finishedLoading && (!selectedGroupId || !currentGroup);
+
+    if (groupNotFound && location !== '/select-group' && location !== '/login') {
+      localStorage.removeItem('financial:selectedGroupId');
+      navigate('/select-group', { replace: true });
+    }
+  }, [isLoadingGroups, isLoadingProfile, selectedGroupId, currentGroup, location, navigate]);
 
   const pendingPredictions = useMemo(() => {
     const today = new Date();
@@ -88,6 +99,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       .filter((t: Transaction) => t.isPrediction && new Date(t.date) <= today)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions]);
+
+  const isInitialLoading = (isLoadingGroups || isLoadingProfile || (!groups && !isGroupsError) || (selectedGroupId && !currentGroup && !isGroupsError));
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <div className="flex flex-col items-center animate-pulse">
+            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">FinApp</p>
+            <p className="text-xs text-muted-foreground/60">Carregando seu painel financeiro...</p>
+        </div>
+      </div>
+    );
+  }
 
   const Sidebar = () => (
     <aside className="flex flex-col h-full bg-card border-r border-border/60 w-64">
@@ -109,7 +134,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <Users className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight leading-none mb-1">Perfil Ativo</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight leading-none mb-1">Conta Atual</span>
                   <span className="text-sm font-semibold truncate leading-none">{currentGroup?.name || 'Selecione'}</span>
                 </div>
               </div>
@@ -117,7 +142,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start">
-            <div className="p-2 px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Trocar Perfil</div>
+            <div className="p-2 px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Trocar Conta</div>
             {groups?.map(g => (
                <DropdownMenuItem key={g.id} onClick={() => {
                  localStorage.setItem('financial:selectedGroupId', g.id);
@@ -129,7 +154,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/select-group')}>
-              <Plus className="w-4 h-4 mr-2" /> Gerenciar Perfis
+              <Plus className="w-4 h-4 mr-2" /> Gerenciar Contas
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -15,8 +15,9 @@ export interface Goal {
 }
 
 export function useGoals() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['goals'],
+    queryKey: ['goals', groupId],
     queryFn: async () => {
       const response = await http.get<{ goals: Goal[] }>('/goals')
       return response.data.goals

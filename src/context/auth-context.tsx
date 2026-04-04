@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { token: authToken } = await authenticate({ email, password })
 
+      localStorage.removeItem('financial:selectedGroupId')
       localStorage.setItem(TOKEN_KEY, authToken)
       setToken(authToken)
 
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function signInWithToken(authToken: string) {
+    localStorage.removeItem('financial:selectedGroupId')
     localStorage.setItem(TOKEN_KEY, authToken)
     setToken(authToken)
   }

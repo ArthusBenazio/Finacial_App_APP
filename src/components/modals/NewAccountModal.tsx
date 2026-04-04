@@ -29,8 +29,20 @@ const formSchema = z.object({
   balance: z.string().optional(),
 })
 
-export function NewAccountModal({ children }: { children?: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false)
+export function NewAccountModal({ 
+  children,
+  open: externalOpen,
+  onOpenChange: setExternalOpen 
+}: { 
+  children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const isControlled = externalOpen !== undefined
+  const open = isControlled ? externalOpen : internalOpen
+  const setOpen = isControlled ? setExternalOpen! : setInternalOpen
+
   const { mutateAsync: createAccount, isPending } = useCreateAccount()
 
   const form = useForm<z.infer<typeof formSchema>>({

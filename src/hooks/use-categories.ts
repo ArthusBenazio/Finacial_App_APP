@@ -9,8 +9,9 @@ export interface Category {
 }
 
 export function useCategories() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', groupId],
     queryFn: async () => {
       const response = await http.get<{ categories: Category[] }>('/categories')
       return response.data.categories

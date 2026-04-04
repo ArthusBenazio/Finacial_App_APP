@@ -31,8 +31,9 @@ export interface Transaction {
 }
 
 export function useTransactions() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['transactions'],
+    queryKey: ['transactions', groupId],
     queryFn: async () => {
       const response = await http.get<{ transactions: Transaction[] }>('/transactions')
       return response.data.transactions

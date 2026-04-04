@@ -21,8 +21,9 @@ export interface Budget {
 }
 
 export function useBudgets() {
+  const groupId = localStorage.getItem('financial:selectedGroupId')
   return useQuery({
-    queryKey: ['budgets'],
+    queryKey: ['budgets', groupId],
     queryFn: async () => {
       const response = await http.get<{ budgets: Budget[] }>('/budgets')
       return response.data.budgets

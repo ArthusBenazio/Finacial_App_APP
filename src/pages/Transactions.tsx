@@ -228,20 +228,6 @@ export default function Transactions() {
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-xs font-mono mb-4">
-        <h4 className="font-bold mb-2">DEBUG PANEL</h4>
-        <div>Accounts Loaded: {accounts?.length}</div>
-        <div>Transactions Loaded: {transactions?.length}</div>
-        <div className="mt-2 text-amber-800">
-           {accounts && accountsBalance?.accounts.map(a => (
-             <div key={a.id}>{a.name}: {a.balance.toFixed(2)} (DB: {accounts.find(x => x.id === a.id)?.balance.toFixed(2)})</div>
-           ))}
-        </div>
-        <div className="mt-2 font-bold bordert-t border-amber-200 pt-2">
-           Global Real Sum: {accountsBalance?.accounts.reduce((sum, a) => sum + a.balance, 0).toFixed(2)}
-        </div>
-      </div>
-
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3 border-b border-border/50">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">

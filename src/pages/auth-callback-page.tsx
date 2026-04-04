@@ -17,7 +17,7 @@ export function AuthCallbackPage() {
     }
 
     signInWithToken(token)
-    navigate('/dashboard', { replace: true })
+    navigate('/select-group', { replace: true })
   }, [navigate, searchParams, signInWithToken])
 
   return (
