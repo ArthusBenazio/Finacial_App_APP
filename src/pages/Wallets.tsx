@@ -11,9 +11,9 @@ import {
   MoreHorizontal,
   PlusCircle
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useAccountsBalance, useDeleteAccount } from "@/hooks/use-accounts";
 import { NewAccountModal } from "@/components/modals/NewAccountModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,12 +30,12 @@ export default function Wallets() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Carteiras & Contas</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Carteiras</h1>
           <p className="text-muted-foreground text-sm">Organize seu dinheiro em diferentes bancos e categorias.</p>
         </div>
         <NewAccountModal>
           <Button className="rounded-full gap-2">
-            <PlusCircle className="w-4 h-4" /> Adicionar Conta
+            <PlusCircle className="w-4 h-4" /> Adicionar Carteira
           </Button>
         </NewAccountModal>
       </div>
@@ -59,16 +59,21 @@ export default function Wallets() {
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm("Deseja realmente excluir esta conta e suas transações associadas?")) {
-                        deleteAccount(account.id);
-                      }
-                    }}>
-                      Excluir Conta
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
+                    <DropdownMenuContent align="end">
+                      <ConfirmModal
+                        title="Deseja realmente excluir esta carteira?"
+                        description="Todas as transações associadas a esta carteira também serão excluídas permanentemente."
+                        onConfirm={() => deleteAccount(account.id)}
+                        confirmText="Excluir"
+                      >
+                        <DropdownMenuItem 
+                          className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" 
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          Excluir Carteira
+                        </DropdownMenuItem>
+                      </ConfirmModal>
+                    </DropdownMenuContent>
                 </DropdownMenu>
               </div>
               <div className="mt-4">
@@ -97,7 +102,7 @@ export default function Wallets() {
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10">
               <Plus className="w-6 h-6" />
             </div>
-            <span className="font-semibold text-sm text-center">Configurar nova<br/>conta ou carteira</span>
+            <span className="font-semibold text-sm text-center">Configurar nova<br/>carteira</span>
           </button>
         </NewAccountModal>
       </div>

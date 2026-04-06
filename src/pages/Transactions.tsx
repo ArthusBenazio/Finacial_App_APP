@@ -36,10 +36,11 @@ import { useAccounts, useAccountsBalance } from "@/hooks/use-accounts";
 import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 import { EditTransactionModal } from "@/components/modals/EditTransactionModal";
 import { Transaction } from "@/hooks/use-transactions";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function Transactions() {
   const currentDate = new Date();
-  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthStr = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}`;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
@@ -69,7 +70,7 @@ export default function Transactions() {
     currentMonthStr,
     ...(transactions?.map(t => {
       const d = new Date(t.date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
     }) || [])
   ])).sort().reverse();
 
@@ -162,7 +163,7 @@ export default function Transactions() {
 
   const filteredTransactions = (transactions?.filter(t => {
     const transactionDate = new Date(t.date);
-    const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
+    const transactionMonth = `${transactionDate.getUTCFullYear()}-${String(transactionDate.getUTCMonth() + 1).padStart(2, '0')}`;
     
     const matchesSearch = 
       t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -360,7 +361,7 @@ export default function Transactions() {
                       )}
                     </td>
                     <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
-                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(t.date))}
+                      {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(t.date))}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <span className={cn(
@@ -417,30 +418,35 @@ export default function Transactions() {
                           }}>
                             Editar Lançamento
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm("Deseja realmente excluir este lançamento?")) {
-                                deleteTransaction(t.id);
-                              }
-                            }}
+                          <ConfirmModal
+                            title="Excluir Lançamento?"
+                            description="Esta ação removerá permanentemente este lançamento do seu extrato e afetará o saldo da conta."
+                            onConfirm={() => deleteTransaction(t.id)}
+                            confirmText="Excluir"
                           >
-                            Excluir este lançamento
-                          </DropdownMenuItem>
-                          {t.isRecurring && t.recurringGroupId && (
                             <DropdownMenuItem
-                              className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm(`Deseja excluir TODOS os ${t.recurringTotal} lançamentos desta série?`)) {
-                                  deleteRecurringGroup(t.recurringGroupId!);
-                                }
-                              }}
+                              className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                              onSelect={(e) => e.preventDefault()}
                             >
-                              <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                              Excluir toda a série
+                              Excluir este lançamento
                             </DropdownMenuItem>
+                          </ConfirmModal>
+
+                          {t.isRecurring && t.recurringGroupId && (
+                            <ConfirmModal
+                              title="Excluir Série Recorrente?"
+                              description={`Deseja excluir TODOS os ${t.recurringTotal} lançamentos desta série? Esta ação não pode ser desfeita.`}
+                              onConfirm={() => deleteRecurringGroup(t.recurringGroupId!)}
+                              confirmText="Excluir Série"
+                            >
+                              <DropdownMenuItem
+                                className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                                Excluir toda a série
+                              </DropdownMenuItem>
+                            </ConfirmModal>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>

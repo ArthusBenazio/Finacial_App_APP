@@ -203,7 +203,12 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[440px] rounded-2xl max-h-[95vh] overflow-y-auto p-5">
+      <DialogContent 
+        className="sm:max-w-[440px] rounded-2xl max-h-[95vh] overflow-y-auto p-5"
+        onOpenAutoFocus={(e) => {
+          // Evita seleção agressiva do texto ao abrir
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Novo Lançamento</DialogTitle>
         </DialogHeader>
@@ -220,6 +225,8 @@ export function NewTransactionModal({ children }: { children?: React.ReactNode }
                     <Input
                       placeholder="Ex: Mercado, Salário, Faculdade"
                       {...field}
+                      autoFocus
+                      autoComplete="off"
                       className="h-10 bg-muted/30 border-none"
                     />
                   </FormControl>

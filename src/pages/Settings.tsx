@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useCategories, useDeleteCategory } from "@/hooks/use-categories";
 import { NewCategoryModal } from "@/components/modals/NewCategoryModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<"profile" | "categories">("profile");
@@ -164,18 +165,20 @@ export default function Settings() {
                             <span className="font-semibold">{cat.name}</span>
                           </div>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                          onClick={() => {
-                            if (window.confirm(`Tem certeza que deseja excluir a categoria ${cat.name}?`)) {
-                              deleteCategory(cat.id);
-                            }
-                          }}
+                        <ConfirmModal
+                          title="Excluir Categoria?"
+                          description={`Deseja realmente excluir a categoria ${cat.name}? Isso pode afetar seus orçamentos.`}
+                          onConfirm={() => deleteCategory(cat.id)}
+                          confirmText="Excluir"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </ConfirmModal>
                       </div>
                     ))
                   )}

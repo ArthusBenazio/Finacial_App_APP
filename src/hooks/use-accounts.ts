@@ -57,6 +57,7 @@ export function useCreateAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
@@ -71,6 +72,8 @@ export function useDeleteAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['accounts', 'balance'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }

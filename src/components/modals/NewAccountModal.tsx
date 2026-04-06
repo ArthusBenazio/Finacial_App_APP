@@ -80,7 +80,12 @@ export function NewAccountModal({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+      <DialogContent 
+        className="sm:max-w-[425px] rounded-2xl"
+        onOpenAutoFocus={(e) => {
+          // Evita seleção agressiva do texto ao abrir
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Wallet className="w-5 h-5 text-primary" />
@@ -96,7 +101,13 @@ export function NewAccountModal({
                 <FormItem>
                   <FormLabel>Nome da Conta / Instituição</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Nubank, Itaú, Carteira..." {...field} className="h-11 bg-muted/30 border-none" />
+                    <Input 
+                      placeholder="Ex: Nubank, Itaú, Carteira..." 
+                      {...field} 
+                      autoFocus
+                      autoComplete="off"
+                      className="h-11 bg-muted/30 border-none" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

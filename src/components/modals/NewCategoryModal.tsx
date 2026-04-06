@@ -77,7 +77,12 @@ export function NewCategoryModal({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+      <DialogContent 
+        className="sm:max-w-[425px] rounded-2xl"
+        onOpenAutoFocus={(e) => {
+          // Permite o foco, mas evita comportamentos agressivos de seleção
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Nova Categoria</DialogTitle>
         </DialogHeader>
@@ -90,7 +95,13 @@ export function NewCategoryModal({
                 <FormItem>
                   <FormLabel>Nome da Categoria</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Mercado, Lazer, etc." {...field} className="h-11 bg-muted/30 border-none" />
+                    <Input 
+                      placeholder="Ex: Mercado, Lazer, etc." 
+                      {...field} 
+                      autoFocus
+                      autoComplete="off"
+                      className="h-11 bg-muted/30 border-none" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

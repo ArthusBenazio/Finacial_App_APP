@@ -751,7 +751,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {getAccountName(t.accountId)} &bull;{" "}
-                        {new Intl.DateTimeFormat("pt-BR").format(new Date(t.date))}
+                        {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(t.date))}
                       </p>
                     </div>
                     <DropdownMenu>

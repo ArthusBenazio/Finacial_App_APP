@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmModal } from "@/components/ConfirmModal";
 export default function Budgets() {
   const { data: budgets } = useBudgets();
   const { data: goals } = useGoals();
@@ -99,13 +100,19 @@ export default function Budgets() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
-                              if (window.confirm("Deseja realmente excluir este orçamento?")) {
-                                deleteBudget(budget.id)
-                              }
-                            }}>
-                              Excluir Orçamento
-                            </DropdownMenuItem>
+                            <ConfirmModal
+                              title="Excluir Orçamento?"
+                              description="Tem certeza que deseja excluir este orçamento mensal?"
+                              onConfirm={() => deleteBudget(budget.id)}
+                              confirmText="Excluir"
+                            >
+                              <DropdownMenuItem 
+                                className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" 
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                Excluir Orçamento
+                              </DropdownMenuItem>
+                            </ConfirmModal>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -184,13 +191,19 @@ export default function Budgets() {
                                   <ArrowUpCircle className="w-4 h-4" /> Depositar
                                 </DropdownMenuItem>
                               </AddGoalFundsModal>
-                              <DropdownMenuItem className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" onClick={() => {
-                                if (window.confirm("Deseja realmente excluir esta meta?")) {
-                                  deleteGoal(goal.id)
-                                }
-                              }}>
-                                Excluir Meta
-                              </DropdownMenuItem>
+                              <ConfirmModal
+                                title="Excluir Meta?"
+                                description="Tem certeza que deseja excluir esta meta de economia?"
+                                onConfirm={() => deleteGoal(goal.id)}
+                                confirmText="Excluir"
+                              >
+                                <DropdownMenuItem 
+                                  className="text-rose-500 hover:text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer" 
+                                  onSelect={(e) => e.preventDefault()}
+                                >
+                                  Excluir Meta
+                                </DropdownMenuItem>
+                              </ConfirmModal>
                             </DropdownMenuContent>
                           </DropdownMenu>
                           <p className="text-xs font-bold text-primary mt-1">
