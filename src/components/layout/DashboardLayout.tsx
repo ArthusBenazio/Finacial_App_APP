@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePrivateMode } from "@/hooks/use-private-mode";
-import { useProfile } from "@/hooks/use-profile";
-import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 import { useGroups } from "@/hooks/use-groups";
 import { useAuth } from "@/context/auth-context";
+import { NewTransactionModal } from "@/components/modals/NewTransactionModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,12 +69,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { isPrivate, togglePrivateMode } = usePrivateMode();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { data: transactions } = useTransactions();
   const { data: groups, isLoading: isLoadingGroups, isError: isGroupsError } = useGroups();
   const { mutate: updateTransaction } = useUpdateTransaction();
   const { mutate: deleteTransaction } = useDeleteTransaction();
-  const { signOut } = useAuth();
+  const { user: profile, signOut } = useAuth();
 
   const selectedGroupId = localStorage.getItem('financial:selectedGroupId');
   const currentGroup = groups?.find(g => g.id === selectedGroupId);
@@ -83,14 +81,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   // Redirecionamento movido para useEffect para maior estabilidade
   useEffect(() => {
     // Só redireciona se terminou de carregar (ou deu erro) e o grupo realmente não está lá
-    const finishedLoading = !isLoadingGroups && !isLoadingProfile;
+    const finishedLoading = !isLoadingGroups;
     const groupNotFound = finishedLoading && (!selectedGroupId || !currentGroup);
 
     if (groupNotFound && location !== '/select-group' && location !== '/login') {
       localStorage.removeItem('financial:selectedGroupId');
       navigate('/select-group', { replace: true });
     }
-  }, [isLoadingGroups, isLoadingProfile, selectedGroupId, currentGroup, location, navigate]);
+  }, [isLoadingGroups, selectedGroupId, currentGroup, location, navigate]);
 
   const pendingPredictions = useMemo(() => {
     const today = new Date();
@@ -100,7 +98,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions]);
 
-  const isInitialLoading = (isLoadingGroups || isLoadingProfile || (!groups && !isGroupsError) || (selectedGroupId && !currentGroup && !isGroupsError));
+  const isInitialLoading = (isLoadingGroups || (!groups && !isGroupsError) || (selectedGroupId && !currentGroup && !isGroupsError));
 
   if (isInitialLoading) {
     return (
