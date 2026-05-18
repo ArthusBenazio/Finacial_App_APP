@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { authenticate, getProfile, signOut as signOutApi } from '../api/auth-api'
 import { User } from '../types/domain'
 
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshProfile()
   }, [])
 
-  async function refreshProfile() {
+  const refreshProfile = useCallback(async () => {
     setIsLoading(true)
 
     try {
@@ -32,9 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  async function signIn(email: string, password: string) {
+  const signIn = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
 
     try {
@@ -47,23 +47,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  function signInWithToken() {
+  const signInWithToken = useCallback(() => {
     // Com cookies, o token já está no navegador após o redirect do Google.
-    // Basta limpar o groupId e carregar o perfil.
+    // Basta limpar o groupId e aguardar o redirecionamento.
     localStorage.removeItem('financial:selectedGroupId')
-    void refreshProfile()
-  }
+  }, [])
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     try {
       await signOutApi()
     } finally {
       localStorage.removeItem('financial:selectedGroupId')
       setUser(null)
     }
-  }
+  }, [])
 
   const value = useMemo(
     () => ({
