@@ -1,50 +1,33 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { authenticate, getProfile } from '../api/auth-api'
+import { authenticate, getProfile, signOut as signOutApi } from '../api/auth-api'
 import { User } from '../types/domain'
 
 interface AuthContextValue {
-  token: string | null
   user: User | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signInWithToken: (authToken: string) => void
+  signInWithToken: () => void
   signOut: () => void
   refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const TOKEN_KEY = 'financial:token'
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(Boolean(token))
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!token) {
-      setUser(null)
-      setIsLoading(false)
-      return
-    }
-
     void refreshProfile()
-  }, [token])
+  }, [])
 
   async function refreshProfile() {
-    if (!token) {
-      setUser(null)
-      return
-    }
-
     setIsLoading(true)
 
     try {
       const profile = await getProfile()
       setUser(profile)
     } catch {
-      localStorage.removeItem(TOKEN_KEY)
-      setToken(null)
       setUser(null)
     } finally {
       setIsLoading(false)
@@ -55,11 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
 
     try {
-      const { token: authToken } = await authenticate({ email, password })
+      await authenticate({ email, password })
 
       localStorage.removeItem('financial:selectedGroupId')
-      localStorage.setItem(TOKEN_KEY, authToken)
-      setToken(authToken)
 
       const profile = await getProfile()
       setUser(profile)
@@ -68,22 +49,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function signInWithToken(authToken: string) {
+  function signInWithToken() {
+    // Com cookies, o token já está no navegador após o redirect do Google.
+    // Basta limpar o groupId e carregar o perfil.
     localStorage.removeItem('financial:selectedGroupId')
-    localStorage.setItem(TOKEN_KEY, authToken)
-    setToken(authToken)
+    void refreshProfile()
   }
 
-  function signOut() {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem('financial:selectedGroupId')
-    setToken(null)
-    setUser(null)
+  async function signOut() {
+    try {
+      await signOutApi()
+    } finally {
+      localStorage.removeItem('financial:selectedGroupId')
+      setUser(null)
+    }
   }
 
   const value = useMemo(
     () => ({
-      token,
       user,
       isLoading,
       signIn,
@@ -91,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refreshProfile,
     }),
-    [token, user, isLoading],
+    [user, isLoading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

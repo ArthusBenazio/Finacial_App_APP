@@ -4,15 +4,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
 
 export const http = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
 })
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('financial:token')
   const groupId = localStorage.getItem('financial:selectedGroupId')
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
 
   if (groupId) {
     config.headers['x-group-id'] = groupId

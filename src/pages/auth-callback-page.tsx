@@ -9,16 +9,11 @@ export function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = searchParams.get('token')
-
-    if (!token) {
-      setError('Google authentication failed. Missing token.')
-      return
-    }
-
-    signInWithToken(token)
+    // Com a mudança para cookies, o token já deve estar no navegador.
+    // O signInWithToken agora apenas dispara o recarregamento do perfil.
+    signInWithToken()
     navigate('/select-group', { replace: true })
-  }, [navigate, searchParams, signInWithToken])
+  }, [navigate, signInWithToken])
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 bg-gradient-to-br from-[#f8faf9] to-[#edf5f4]">

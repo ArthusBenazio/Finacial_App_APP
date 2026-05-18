@@ -18,7 +18,7 @@ interface InviteDetails {
 export function InvitePage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { token: authToken } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [invite, setInvite] = useState<InviteDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function InvitePage() {
   }, [token]);
 
   const handleAccept = async () => {
-    if (!authToken) {
+    if (!user) {
       // If not logged in, send to register/login with a redirect back
       navigate(`/register?invite=${token}`);
       return;
@@ -109,7 +109,7 @@ export function InvitePage() {
                 {isAccepting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Aceitar Convite e Entrar"}
               </Button>
               <p className="text-[10px] text-center text-muted-foreground">
-                {authToken ? "Você está logado. O convite será vinculado à sua conta atual." : "Você precisará criar uma conta ou fazer login para continuar."}
+                {user ? "Você está logado. O convite será vinculado à sua conta atual." : "Você precisará criar uma conta ou fazer login para continuar."}
               </p>
             </>
           )}

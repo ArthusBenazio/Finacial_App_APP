@@ -17,9 +17,9 @@ import { InvitePage } from './pages/InvitePage'
 import { SelectGroupPage } from './pages/SelectGroupPage'
 
 function PublicOnlyRoute({ children }: { children: JSX.Element }) {
-  const { token } = useAuth()
+  const { user } = useAuth()
 
-  if (token) {
+  if (user) {
     return <Navigate to="/select-group" replace />
   }
 

@@ -22,3 +22,7 @@ export async function getProfile() {
   const response = await http.get<ProfileResponse>('/me')
   return response.data.user
 }
+
+export async function signOut() {
+  await http.post('/sessions/sign-out')
+}
