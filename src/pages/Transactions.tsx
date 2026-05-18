@@ -87,7 +87,6 @@ export default function Transactions() {
       const pastAlignedAcc = accountsBalance.accounts.find(a => a.id === acc.id);
       currentRealBalances[acc.id] = pastAlignedAcc ? pastAlignedAcc.balance : Number(acc.balance);
     });
-    console.log('DEBUG BALANCES:', currentRealBalances);
 
     // We also need "Projetado" balances which include everything
     const currentProjectedBalances: Record<string, number> = {};
@@ -95,7 +94,6 @@ export default function Transactions() {
       // Standard DB balance already includes everything
       currentProjectedBalances[acc.id] = Number(acc.balance);
     });
-    console.log('STARTING GLOBAL:', Object.values(currentRealBalances).reduce((a,b)=>a+b,0));
 
     // To calculate the balance at EACH row, we walk BACKWARDS from the current balances.
     // Row balance = Balance after this transaction happened.
