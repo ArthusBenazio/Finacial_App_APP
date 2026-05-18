@@ -23,7 +23,7 @@ export function RegisterPage() {
       await registerUser({ name, email, password })
       navigate('/login')
     } catch {
-      setError('Unable to create your account. This email may already be in use.')
+      setError('Não foi possível criar sua conta. Este e-mail já pode estar em uso.')
     } finally {
       setIsLoading(false)
     }
@@ -41,39 +41,39 @@ export function RegisterPage() {
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
               </svg>
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight text-[#084e4f]">Create an account</CardTitle>
-            <CardDescription className="text-base">Start your financial journey</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight text-[#084e4f]">Criar uma conta</CardTitle>
+            <CardDescription className="text-base">Comece sua jornada financeira</CardDescription>
           </CardHeader>
           
           <CardContent className="pb-8">
             <form onSubmit={handleSubmit} className="grid gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="name" className="text-foreground/80 font-semibold">Full Name</Label>
+                <Label htmlFor="name" className="text-foreground/80 font-semibold">Nome Completo</Label>
                 <Input
                   id="name"
                   required
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="John Doe"
+                  placeholder="João Silva"
                   className="h-11 bg-muted/20 focus-visible:ring-[#0b6e6f] border-muted-foreground/20"
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="email" className="text-foreground/80 font-semibold">Email address</Label>
+                <Label htmlFor="email" className="text-foreground/80 font-semibold">Endereço de e-mail</Label>
                 <Input
                   id="email"
                   required
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@email.com"
+                  placeholder="voce@email.com"
                   className="h-11 bg-muted/20 focus-visible:ring-[#0b6e6f] border-muted-foreground/20"
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="password" className="text-foreground/80 font-semibold">Password</Label>
+                <Label htmlFor="password" className="text-foreground/80 font-semibold">Senha</Label>
                 <Input
                   id="password"
                   required
@@ -81,7 +81,7 @@ export function RegisterPage() {
                   minLength={6}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Pelo menos 6 caracteres"
                   className="h-11 bg-muted/20 focus-visible:ring-[#0b6e6f] border-muted-foreground/20"
                 />
               </div>
@@ -93,13 +93,13 @@ export function RegisterPage() {
               ) : null}
 
               <Button type="submit" className="w-full h-11 mt-2 bg-[#0b6e6f] hover:bg-[#084e4f] text-white shadow-md transition-all active:scale-[0.98] font-semibold text-base" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Create account'}
+                {isLoading ? 'Criando conta...' : 'Criar conta'}
               </Button>
               
               <div className="text-center text-sm font-medium mt-2">
-                Already registered?{' '}
+                Já tem uma conta?{' '}
                 <Link to="/login" className="text-[#0b6e6f] hover:text-[#084e4f] hover:underline transition-colors font-semibold">
-                  Sign in
+                  Entrar
                 </Link>
               </div>
             </form>

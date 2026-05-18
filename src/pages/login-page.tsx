@@ -21,7 +21,7 @@ export function LoginPage() {
       const nextRoute = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/select-group'
       navigate(nextRoute)
     } catch {
-      setError('Invalid credentials. Please check your email and password.')
+      setError('Credenciais inválidas. Verifique seu e-mail e senha.')
     }
   }
 

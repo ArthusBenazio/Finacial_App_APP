@@ -46,8 +46,8 @@ export function LoginForm({
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
             </svg>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-[#084e4f]">Welcome back</CardTitle>
-          <CardDescription className="text-base">Sign in to your financial dashboard</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight text-[#084e4f]">Bem-vindo de volta</CardTitle>
+          <CardDescription className="text-base">Entre no seu painel financeiro</CardDescription>
         </CardHeader>
         
         <CardContent className="pb-8">
@@ -62,24 +62,24 @@ export function LoginForm({
                         fill="currentColor"
                       />
                     </svg>
-                    Continue with Google
+                    Continuar com o Google
                   </a>
                 </Button>
               </div>
               
               <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-muted-foreground/20">
                 <span className="relative z-10 bg-white px-2 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                  Or sign in with email
+                  Ou entre com e-mail
                 </span>
               </div>
               
               <div className="grid gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-foreground/80 font-semibold">Email address</Label>
+                  <Label htmlFor="email" className="text-foreground/80 font-semibold">Endereço de e-mail</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="voce@exemplo.com"
                     value={email}
                     onChange={(event) => onEmailChange(event.target.value)}
                     required
@@ -89,8 +89,8 @@ export function LoginForm({
                 
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-foreground/80 font-semibold">Password</Label>
-                    <a href="#" className="text-xs text-[#0b6e6f] hover:underline font-medium">Forgot password?</a>
+                    <Label htmlFor="password" className="text-foreground/80 font-semibold">Senha</Label>
+                    <a href="#" className="text-xs text-[#0b6e6f] hover:underline font-medium">Esqueceu a senha?</a>
                   </div>
                   <Input
                     id="password"
@@ -110,14 +110,14 @@ export function LoginForm({
                 ) : null}
                 
                 <Button type="submit" className="w-full h-11 mt-2 bg-[#0b6e6f] hover:bg-[#084e4f] text-white shadow-md transition-all active:scale-[0.98] font-semibold text-base" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign in'}
+                  {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </div>
               
               <div className="text-center text-sm font-medium mt-2">
-                Don&apos;t have an account?{' '}
+                Não tem uma conta?{' '}
                 <Link to="/register" className="text-[#0b6e6f] hover:text-[#084e4f] hover:underline transition-colors font-semibold">
-                  Create one now
+                  Crie uma agora
                 </Link>
               </div>
             </div>
@@ -126,7 +126,7 @@ export function LoginForm({
       </Card>
       
       <div className="text-balance text-center text-xs text-muted-foreground font-medium">
-        Secure session using your Financial App credentials.
+        Sessão segura usando suas credenciais do FinApp.
       </div>
     </div>
   )
